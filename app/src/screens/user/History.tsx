@@ -10,7 +10,8 @@ export default function History() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const tgUser = useStore(s => s.tgUser)
-  const attempts = useStore(s => s.attempts.filter(a => a.userId === tgUser?.id))
+  const _attemptsRaw = useStore(s => s.attempts)
+  const attempts = useMemo(() => _attemptsRaw.filter(a => a.userId === tgUser?.id), [_attemptsRaw, tgUser?.id])
 
   const grouped = useMemo(() => {
     const map = new Map<string, typeof attempts>()

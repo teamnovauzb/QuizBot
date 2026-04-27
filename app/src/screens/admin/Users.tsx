@@ -1,14 +1,16 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { useStore } from '../../store'
 import { PageHeader, Card } from '../../components/Shell'
-import { SearchIcon } from '../../components/Icons'
+import { SearchIcon, ArrowIcon } from '../../components/Icons'
 import { relTime } from '../../lib/time'
 import clsx from 'clsx'
 import { haptic } from '../../lib/telegram'
 
 export default function AdminUsers() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const tgUser = useStore(s => s.tgUser)
   const users = useStore(s => s.users)
   const groups = useStore(s => s.groups)
@@ -27,9 +29,36 @@ export default function AdminUsers() {
     return pool.sort((a, b) => b.lastActive - a.lastActive)
   }, [users, myGroup, search, tab])
 
+  function exportCsv() {
+    const rows = list.map(u => {
+      const ua = attempts.filter(a => a.userId === u.telegramId)
+      const total = ua.reduce((s, a) => s + a.total, 0)
+      const correct = ua.reduce((s, a) => s + a.score, 0)
+      const avg = total ? Math.round((correct / total) * 100) : 0
+      return [u.telegramId, u.name, u.username ?? '', u.role, u.blocked ? '1' : '0', ua.length, avg, new Date(u.lastActive).toISOString()]
+    })
+    const header = ['telegram_id', 'name', 'username', 'role', 'blocked', 'attempts', 'avg_pct', 'last_active']
+    const csv = [header, ...rows].map(r => r.map(x => `"${String(x).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `shifokorat-users-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="flex-1 overflow-y-auto pb-24">
-      <PageHeader eyebrow={myGroup?.name ?? t('common.all')} title={t('nav.users')} />
+      <PageHeader
+        eyebrow={myGroup?.name ?? t('common.all')}
+        title={t('nav.users')}
+        right={
+          <button onClick={exportCsv} className="rounded-full border border-[var(--hairline)] px-3 py-2 text-[10px] uppercase font-mono tracking-[0.18em]">
+            CSV
+          </button>
+        }
+      />
 
       <div className="px-5 mt-2">
         <div className="flex items-center gap-2 px-4 py-3 rounded-2xl border border-[var(--hairline)] bg-[var(--paper-2)]">
@@ -58,7 +87,7 @@ export default function AdminUsers() {
           const userAttempts = attempts.filter(a => a.userId === u.telegramId)
           const avg = userAttempts.length ? Math.round(userAttempts.reduce((s, a) => s + a.score / a.total * 100, 0) / userAttempts.length) : 0
           return (
-            <Card key={u.telegramId} className="p-4 paper-rise" >
+            <Card key={u.telegramId} className="p-4 paper-rise" onClick={() => navigate(`/admin/users/${u.telegramId}`)}>
               <div className="flex items-center gap-3">
                 <div className="font-display text-2xl numerals w-8 text-[var(--ink-soft)] opacity-30 text-center">
                   {(i + 1).toString().padStart(2, '0')}
@@ -78,7 +107,15 @@ export default function AdminUsers() {
                   <div className="text-[9px] uppercase font-mono tracking-[0.18em] text-[var(--ink-soft)] opacity-60">{userAttempts.length} {t('home.completed').toLowerCase()}</div>
                 </div>
               </div>
-              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[var(--hairline)]">
+              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[var(--hairline)]" onClick={e => e.stopPropagation()}>
+                <a
+                  href={u.username ? `https://t.me/${u.username}` : '#'}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 rounded-xl py-2 text-xs border border-[var(--hairline)] text-[var(--ink-soft)] text-center"
+                >
+                  {t('admin.dm')}
+                </a>
                 <button
                   onClick={() => { toggleBlock(u.telegramId); haptic('medium') }}
                   className={clsx(
@@ -88,6 +125,7 @@ export default function AdminUsers() {
                 >
                   {u.blocked ? t('admin.unblock') : t('admin.block')}
                 </button>
+                <ArrowIcon className="w-4 h-4 stroke-[var(--ink-soft)] ml-1" />
               </div>
             </Card>
           )

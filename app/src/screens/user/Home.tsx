@@ -1,14 +1,16 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useStore } from '../../store'
 import { CATEGORIES } from '../../data/questions'
 import { Card, PageHeader } from '../../components/Shell'
 import { LangSwitcher } from '../../components/LangSwitcher'
-import { ArrowIcon, FlameIcon, SparkleIcon, BookIcon, ClockIcon } from '../../components/Icons'
+import { ArrowIcon, FlameIcon, SparkleIcon, BookIcon, ClockIcon, XIcon } from '../../components/Icons'
 import { haptic } from '../../lib/telegram'
 import { relTime } from '../../lib/time'
 import clsx from 'clsx'
+import { fetchAssignments, type AssignmentRow } from '../../lib/api2'
+import { SUPABASE_ENABLED } from '../../lib/supabase'
 
 const COUNT_OPTIONS = [10, 20, 30]
 const TIME_OPTIONS = [15, 30, 45, 60]
@@ -26,12 +28,36 @@ export default function UserHome() {
     const totalQ = userAttempts.reduce((s, a) => s + a.total, 0)
     const accuracy = totalQ ? Math.round((totalCorrect / totalQ) * 100) : 0
     const best = Math.max(...userAttempts.map(a => Math.round((a.score / a.total) * 100)))
-    return { score: totalCorrect, streak: 3, accuracy, completed: userAttempts.length, best }
+    // real streak from days
+    const days = new Set(userAttempts.map(a => new Date(a.startedAt).toISOString().slice(0, 10)))
+    let streak = 0
+    const today = new Date()
+    today.setHours(0,0,0,0)
+    for (let i = 0; ; i++) {
+      const d = new Date(today.getTime() - i * 86400000).toISOString().slice(0, 10)
+      if (days.has(d)) streak++
+      else break
+    }
+    return { score: totalCorrect, streak, accuracy, completed: userAttempts.length, best }
   }, [userAttempts])
+
+  // wrong-answers count for review CTA
+  const wrongCount = useMemo(() => {
+    const ids = new Set<string>()
+    for (const a of userAttempts) for (const ans of a.answers) if (!ans.correct) ids.add(ans.questionId)
+    return ids.size
+  }, [userAttempts])
+
+  const bookmarks = useStore(s => s.bookmarks)
 
   const [cat, setCat] = useState<string>('all')
   const [count, setCount] = useState(10)
   const [perQ, setPerQ] = useState(30)
+  const [assignments, setAssignments] = useState<AssignmentRow[]>([])
+  useEffect(() => {
+    if (!SUPABASE_ENABLED) return
+    fetchAssignments().then(r => { if (r.ok) setAssignments(r.data) })
+  }, [])
 
   function start() {
     haptic('medium')
@@ -59,6 +85,32 @@ export default function UserHome() {
         <StatTile label={t('home.completed')} value={stats.completed} />
       </section>
 
+      {/* ASSIGNMENTS — first if any */}
+      {assignments.length > 0 && (
+        <section className="px-5 mt-6 paper-rise">
+          <div className="flex items-baseline gap-2 mb-3">
+            <span className="font-mono text-[10px] tracking-[0.22em] uppercase text-[var(--ink-soft)] opacity-70">{t('nav.assignments')}</span>
+          </div>
+          <ul className="space-y-2">
+            {assignments.slice(0, 2).map(a => (
+              <Card key={a.id} className="p-4" onClick={() => navigate(`/u/quiz?ids=${a.question_ids.join(',')}&time=${a.time_per_q}&assignment=${a.id}`)}>
+                <div className="flex items-start gap-3">
+                  <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--accent)] shrink-0 mt-0.5">A</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-display text-lg truncate">{a.title}</div>
+                    <div className="text-[10px] uppercase font-mono tracking-[0.18em] text-[var(--ink-soft)]">
+                      {a.question_ids.length} {t('home.questions')} · {a.time_per_q}s/q
+                      {a.deadline && ` · ${new Date(a.deadline).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`}
+                    </div>
+                  </div>
+                  <ArrowIcon className="w-4 h-4 stroke-[var(--ink-soft)]" />
+                </div>
+              </Card>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* TODAY'S FOCUS — Big editorial CTA */}
       <section className="px-5 mt-6 paper-rise" style={{ animationDelay: '0.2s' }}>
         <div className="flex items-baseline gap-2 mb-3">
@@ -79,6 +131,34 @@ export default function UserHome() {
           </div>
         </Card>
       </section>
+
+      {/* SHORTCUTS — wrong-answers + bookmarks + achievements */}
+      {(wrongCount > 0 || bookmarks.length > 0) && (
+        <section className="px-5 mt-5 grid grid-cols-2 gap-2 paper-rise">
+          {wrongCount > 0 && (
+            <Card className="p-3 flex items-center gap-3" onClick={() => navigate('/u/quiz?wrong=1&time=45')}>
+              <div className="w-9 h-9 rounded-full bg-[#3D1218]/20 grid place-items-center text-[#F87171] shrink-0">
+                <XIcon className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="font-display text-sm truncate">{t('home.wrongOnly')}</div>
+                <div className="text-[10px] uppercase font-mono tracking-[0.18em] text-[var(--ink-soft)]">{wrongCount}</div>
+              </div>
+            </Card>
+          )}
+          {bookmarks.length > 0 && (
+            <Card className="p-3 flex items-center gap-3" onClick={() => navigate('/u/bookmarks')}>
+              <div className="w-9 h-9 rounded-full bg-[var(--accent)]/20 grid place-items-center text-[var(--accent)] shrink-0">
+                <BookIcon className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="font-display text-sm truncate">{t('nav.bookmarks')}</div>
+                <div className="text-[10px] uppercase font-mono tracking-[0.18em] text-[var(--ink-soft)]">{bookmarks.length}</div>
+              </div>
+            </Card>
+          )}
+        </section>
+      )}
 
       {/* CATEGORY */}
       <section className="px-5 mt-7 paper-rise" style={{ animationDelay: '0.25s' }}>

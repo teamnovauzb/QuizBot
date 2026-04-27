@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { QUESTIONS, type Question } from '../data/questions'
 import * as api from '../lib/api'
+import * as api2 from '../lib/api2'
 import { SUPABASE_ENABLED } from '../lib/supabase'
 import type { AppUser, Attempt, AuditEntry, Group, Role, TelegramUser } from './types'
 
@@ -20,6 +21,8 @@ type State = {
   questions: Question[]
   attempts: Attempt[]
   audit: AuditEntry[]
+  bookmarks: string[]
+  unlockedAchievements: string[]
 
   setTgUser: (u: TelegramUser) => void
   setRole: (r: Role) => void
@@ -40,6 +43,9 @@ type State = {
 
   saveAttempt: (a: Attempt) => void
   log: (action: string, target?: string) => void
+
+  toggleBookmark: (questionId: string) => void
+  unlockAchievement: (slug: string) => void
 
   hydrateFromSupabase: () => Promise<void>
 }
@@ -99,6 +105,8 @@ export const useStore = create<State>()(persist((set, get) => ({
   questions: QUESTIONS,
   attempts: seedAttempts,
   audit: [],
+  bookmarks: [],
+  unlockedAchievements: [],
 
   setTgUser: (u) => {
     const exists = get().users.find(x => x.telegramId === u.id)
@@ -188,6 +196,17 @@ export const useStore = create<State>()(persist((set, get) => ({
     set(s => ({ attempts: [a, ...s.attempts] }))
     if (SUPABASE_ENABLED) fnf(api.insertAttempt(a))
   },
+
+  toggleBookmark: (questionId) => {
+    const has = get().bookmarks.includes(questionId)
+    set(s => ({ bookmarks: has ? s.bookmarks.filter(x => x !== questionId) : [questionId, ...s.bookmarks] }))
+    if (SUPABASE_ENABLED) fnf(api2.toggleBookmark(questionId, !has))
+  },
+  unlockAchievement: (slug) => {
+    if (get().unlockedAchievements.includes(slug)) return
+    set(s => ({ unlockedAchievements: [slug, ...s.unlockedAchievements] }))
+    if (SUPABASE_ENABLED) fnf(api2.unlockAchievement(slug))
+  },
   log: (action, target) => {
     const u = get().tgUser
     if (!u) return
@@ -206,23 +225,30 @@ export const useStore = create<State>()(persist((set, get) => ({
   hydrateFromSupabase: async () => {
     if (!SUPABASE_ENABLED) return
     set({ syncing: true, syncError: null })
-    const [users, groups, questions, attempts, audit] = await Promise.all([
+    const [users, groups, questions, attempts, audit, bookmarks] = await Promise.all([
       api.fetchUsers(),
       api.fetchGroups(),
       api.fetchQuestions(),
       api.fetchAttempts(),
       api.fetchAudit(),
+      api2.fetchBookmarks(),
     ])
     if (!users.ok) { set({ syncing: false, syncError: users.error }); return }
     if (!groups.ok) { set({ syncing: false, syncError: groups.error }); return }
     if (!questions.ok) { set({ syncing: false, syncError: questions.error }); return }
     if (!attempts.ok) { set({ syncing: false, syncError: attempts.error }); return }
+    const tgu = get().tgUser
+    if (tgu) {
+      const ua = await api2.fetchUserAchievements(tgu.id)
+      if (ua.ok) set({ unlockedAchievements: ua.data.map(x => x.slug) })
+    }
     set({
       users: users.data.length ? users.data : get().users,
       groups: groups.data.length ? groups.data : get().groups,
       questions: questions.data.length ? questions.data : get().questions,
       attempts: attempts.data.length ? attempts.data : get().attempts,
       audit: audit.ok ? audit.data : get().audit,
+      bookmarks: bookmarks.ok ? bookmarks.data : get().bookmarks,
       hydrated: true,
       syncing: false,
       syncError: null,
@@ -236,6 +262,8 @@ export const useStore = create<State>()(persist((set, get) => ({
     questions: s.questions,
     attempts: s.attempts,
     audit: s.audit,
+    bookmarks: s.bookmarks,
+    unlockedAchievements: s.unlockedAchievements,
     language: s.language,
   }),
 }))

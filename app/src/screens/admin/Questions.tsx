@@ -1,15 +1,17 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '../../store'
 import { PageHeader, Card } from '../../components/Shell'
-import { PlusIcon, EditIcon, TrashIcon, SearchIcon, XIcon, CheckIcon } from '../../components/Icons'
+import { PlusIcon, EditIcon, TrashIcon, SearchIcon, XIcon, CheckIcon, BookIcon } from '../../components/Icons'
 import { CATEGORIES, type Question } from '../../data/questions'
 import clsx from 'clsx'
 import { haptic } from '../../lib/telegram'
 
 export default function Questions() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const questions = useStore(s => s.questions)
   const addQ = useStore(s => s.addQuestion)
   const updateQ = useStore(s => s.updateQuestion)
@@ -32,12 +34,21 @@ export default function Questions() {
         eyebrow={`${questions.length} ${t('home.questions')}`}
         title={t('nav.questions')}
         right={
-          <button
-            onClick={() => { haptic('medium'); setCreating(true) }}
-            className="rounded-full bg-[var(--ink)] text-[var(--paper)] w-12 h-12 grid place-items-center"
-          >
-            <PlusIcon className="w-5 h-5" />
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => navigate('/admin/import')}
+              className="rounded-full border border-[var(--hairline)] w-12 h-12 grid place-items-center text-[var(--ink-soft)]"
+              aria-label="bulk import"
+            >
+              <BookIcon className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => { haptic('medium'); setCreating(true) }}
+              className="rounded-full bg-[var(--ink)] text-[var(--paper)] w-12 h-12 grid place-items-center"
+            >
+              <PlusIcon className="w-5 h-5" />
+            </button>
+          </div>
         }
       />
 
@@ -136,6 +147,8 @@ function QuestionEditor({ initial, onClose, onSave }: {
   const [options, setOptions] = useState<string[]>(initial?.options ?? ['', '', '', ''])
   const [correctIndex, setCorrectIndex] = useState<number>(initial?.correctIndex ?? 0)
   const [category, setCategory] = useState<string>(initial?.category ?? 'Umumiy')
+  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
+  const [explanation, setExplanation] = useState<string>(initial?.explanation ?? '')
 
   return (
     <motion.div
@@ -178,6 +191,23 @@ function QuestionEditor({ initial, onClose, onSave }: {
               ))}
             </div>
           </Field>
+          <Field label={t('admin.difficulty')}>
+            <div className="flex gap-2">
+              {(['easy', 'medium', 'hard'] as const).map(d => (
+                <button key={d} type="button" onClick={() => setDifficulty(d)}
+                  className={clsx(
+                    'flex-1 px-3 py-2 rounded-xl border text-xs uppercase font-mono tracking-[0.18em]',
+                    difficulty === d ? 'bg-[var(--ink)] text-[var(--paper)] border-[var(--ink)]' : 'bg-transparent border-[var(--hairline)] text-[var(--ink-soft)]'
+                  )}
+                >{t(`difficulty.${d}`)}</button>
+              ))}
+            </div>
+          </Field>
+          <Field label={t('admin.explanation')}>
+            <textarea value={explanation} onChange={e => setExplanation(e.target.value)} rows={2}
+              placeholder={t('admin.explanationHint')}
+              className="w-full px-3 py-2 rounded-xl border border-[var(--hairline)] bg-[var(--paper-2)] text-sm resize-none" />
+          </Field>
           <Field label={t('admin.options')}>
             <div className="space-y-2">
               {options.map((o, i) => (
@@ -208,7 +238,7 @@ function QuestionEditor({ initial, onClose, onSave }: {
             {t('admin.cancel')}
           </button>
           <button
-            onClick={() => onSave({ question, options, correctIndex, category })}
+            onClick={() => onSave({ question, options, correctIndex, category, explanation: explanation || undefined } as any)}
             disabled={!question || options.some(o => !o)}
             className="flex-[2] rounded-2xl py-3 bg-[var(--ink)] text-[var(--paper)] disabled:opacity-50 font-display text-base"
           >

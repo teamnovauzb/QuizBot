@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Shell } from '../../components/Shell'
-import { CheckIcon, XIcon, ArrowIcon } from '../../components/Icons'
-import { pickQuiz, type Question } from '../../data/questions'
+import { CheckIcon, XIcon, ArrowIcon, BookIcon } from '../../components/Icons'
+import { pickQuiz, type Question, QUESTIONS } from '../../data/questions'
 import { useStore, type Attempt } from '../../store'
 import { haptic, notify } from '../../lib/telegram'
+import { recordAssignmentCompletion } from '../../lib/api2'
+import { SUPABASE_ENABLED } from '../../lib/supabase'
 import clsx from 'clsx'
 
 type AnswerRecord = { questionId: string; chosenIndex: number | null; correct: boolean; timeMs: number }
@@ -21,8 +23,34 @@ export default function Quiz() {
   const count = parseInt(params.get('count') ?? '10', 10)
   const timePerQ = parseInt(params.get('time') ?? '30', 10)
   const cat = params.get('cat') ?? undefined
+  const idsParam = params.get('ids') ?? undefined
+  const wrongOnly = params.get('wrong') === '1'
+  const assignmentId = params.get('assignment') ?? undefined
+  const allQuestions = useStore(s => s.questions)
+  const _allAttemptsRaw = useStore(s => s.attempts)
+  const allAttempts = useMemo(
+    () => _allAttemptsRaw.filter(a => a.userId === tgUser?.id),
+    [_allAttemptsRaw, tgUser?.id],
+  )
+  const bookmarks = useStore(s => s.bookmarks)
+  const toggleBookmark = useStore(s => s.toggleBookmark)
+  const unlockAchievement = useStore(s => s.unlockAchievement)
 
-  const [questions] = useState<Question[]>(() => pickQuiz({ count, categories: cat ? [cat] : undefined }))
+  const [questions] = useState<Question[]>(() => {
+    // Priority: explicit ids → wrong-only → category/count
+    if (idsParam) {
+      const wanted = idsParam.split(',')
+      const found = wanted.map(id => allQuestions.find(q => q.id === id) ?? QUESTIONS.find(q => q.id === id)).filter(Boolean) as Question[]
+      return found
+    }
+    if (wrongOnly) {
+      const wrongIds = new Set<string>()
+      for (const a of allAttempts) for (const ans of a.answers) if (!ans.correct) wrongIds.add(ans.questionId)
+      const pool = allQuestions.filter(q => wrongIds.has(q.id))
+      return pool.slice(0, count)
+    }
+    return pickQuiz({ count, categories: cat ? [cat] : undefined })
+  })
   const [idx, setIdx] = useState(0)
   const [chosen, setChosen] = useState<number | null>(null)
   const [revealed, setRevealed] = useState(false)
@@ -101,6 +129,20 @@ export default function Quiz() {
       category: cat,
     }
     saveAttempt(attempt)
+
+    // achievements (local detection — server side will reconcile)
+    unlockAchievement('first_quiz')
+    if (score === attempt.total && attempt.total >= 10) unlockAchievement('perfect_10')
+    const totalCorrect = (allAttempts.reduce((s, a) => s + a.score, 0)) + score
+    if (totalCorrect >= 500) unlockAchievement('total_correct_500')
+    const allCount = allAttempts.length + 1
+    if (allCount >= 50) unlockAchievement('attempts_50')
+    if (allCount >= 100) unlockAchievement('attempts_100')
+
+    if (assignmentId && SUPABASE_ENABLED) {
+      recordAssignmentCompletion(assignmentId, attempt.id, score, attempt.total).catch(() => {})
+    }
+
     navigate(`/u/result/${attempt.id}`, { replace: true })
   }
 
@@ -117,6 +159,16 @@ export default function Quiz() {
       <div className="px-5 pt-[max(env(safe-area-inset-top),16px)] pb-3 flex items-center justify-between gap-3">
         <button onClick={() => setShowExit(true)} className="w-9 h-9 rounded-full border border-[var(--hairline)] grid place-items-center">
           <XIcon className="w-4 h-4 stroke-[var(--ink)]" />
+        </button>
+        <button
+          onClick={() => { toggleBookmark(q.id); haptic('light') }}
+          className={clsx(
+            'w-9 h-9 rounded-full grid place-items-center transition-colors',
+            bookmarks.includes(q.id) ? 'bg-[var(--accent)] text-[var(--ink)]' : 'border border-[var(--hairline)] text-[var(--ink-soft)]',
+          )}
+          aria-label="bookmark"
+        >
+          <BookIcon className="w-4 h-4 stroke-current" />
         </button>
         <div className="flex-1 mx-3">
           <div className="flex items-baseline justify-between mb-1">

@@ -8,6 +8,7 @@ import { LangSwitcher } from '../components/LangSwitcher'
 import { ShieldIcon, UserIcon, UsersIcon, ArrowIcon, SparkleIcon } from '../components/Icons'
 import { signInWithTelegram } from '../lib/auth'
 import { SUPABASE_ENABLED } from '../lib/supabase'
+import { TelegramCodeLogin, TelegramLoginWidget } from '../components/TelegramLogin'
 
 const DEMO_USERS = [
   { id: 100001, role: 'superadmin' as Role, name: 'Asadbek K.', tag: '@asadbek', sub: 'Bosh admin' },
@@ -140,6 +141,18 @@ export default function Entry() {
               <ArrowIcon className="w-4 h-4 stroke-[var(--ink)]" />
             </span>
           </button>
+        </div>
+      )}
+
+      {/* WEB LOGIN — for outside Telegram */}
+      {SUPABASE_ENABLED && !tgUser && (
+        <div className="px-5 mt-5 space-y-3 paper-rise">
+          <div className="flex items-center gap-3 mb-1">
+            <span className="font-mono text-[10px] tracking-[0.22em] uppercase text-[var(--ink-soft)] opacity-70">{t('login.title')}</span>
+            <SparkleIcon className="w-3 h-3 stroke-[var(--accent)]" />
+          </div>
+          <TelegramLoginWidget />
+          <TelegramCodeLogin />
         </div>
       )}
 

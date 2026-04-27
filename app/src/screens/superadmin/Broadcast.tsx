@@ -5,6 +5,8 @@ import { useStore } from '../../store'
 import { PageHeader, Card } from '../../components/Shell'
 import { SendIcon, CheckIcon } from '../../components/Icons'
 import { haptic, notify } from '../../lib/telegram'
+import { createAndSendBroadcast } from '../../lib/api2'
+import { SUPABASE_ENABLED } from '../../lib/supabase'
 import clsx from 'clsx'
 
 type Mode = 'all' | 'admins' | 'users'
@@ -17,18 +19,35 @@ export default function Broadcast() {
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [mode, setMode] = useState<Mode>('all')
-  const [sent, setSent] = useState<{ count: number } | null>(null)
+  const [sent, setSent] = useState<{ count: number; failed?: number } | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const me = useStore(s => s.tgUser)
 
   const recipients = mode === 'all' ? users : mode === 'admins' ? users.filter(u => u.role === 'admin' || u.role === 'superadmin') : users.filter(u => u.role === 'user')
 
-  function send() {
-    haptic('heavy')
+  async function send() {
+    haptic('heavy'); setBusy(true); setError(null)
     log(`broadcast → ${mode}`, title)
-    notify('success')
-    setSent({ count: recipients.length })
+
+    if (SUPABASE_ENABLED && me) {
+      const r = await createAndSendBroadcast(me.id, mode, recipients.length, title, body)
+      setBusy(false)
+      if (r.ok) {
+        notify('success')
+        setSent({ count: r.data.sent, failed: r.data.failed })
+      } else {
+        notify('error')
+        setError(r.error)
+      }
+    } else {
+      setBusy(false)
+      notify('success')
+      setSent({ count: recipients.length })
+    }
     setTimeout(() => {
-      setSent(null); setTitle(''); setBody('')
-    }, 2400)
+      setSent(null); setTitle(''); setBody(''); setError(null)
+    }, 3500)
   }
 
   return (
@@ -95,13 +114,14 @@ export default function Broadcast() {
         )}
 
         <button
-          disabled={!title || !body}
+          disabled={!title || !body || busy}
           onClick={send}
           className="w-full rounded-2xl py-4 bg-[var(--accent)] text-[var(--ink)] disabled:opacity-50 font-display text-xl flex items-center justify-center gap-2"
         >
           <SendIcon className="w-5 h-5" />
-          {t('super.send')} → {recipients.length}
+          {busy ? '...' : `${t('super.send')} → ${recipients.length}`}
         </button>
+        {error && <div className="text-xs text-[#F87171] font-mono">{error}</div>}
       </div>
 
       <AnimatePresence>
@@ -118,7 +138,7 @@ export default function Broadcast() {
                 <CheckIcon className="w-8 h-8 stroke-[var(--ink)]" />
               </div>
               <div className="font-display text-3xl">Sent</div>
-              <div className="font-mono text-xs text-[var(--ink-soft)] mt-1">→ {sent.count} recipients</div>
+              <div className="font-mono text-xs text-[var(--ink-soft)] mt-1">→ {sent.count} delivered{typeof sent.failed === 'number' ? ` · ${sent.failed} failed` : ''}</div>
             </motion.div>
           </motion.div>
         )}
