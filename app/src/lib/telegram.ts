@@ -6,11 +6,18 @@ type TgWebApp = {
   initDataUnsafe: { user?: { id: number; first_name: string; last_name?: string; username?: string; language_code?: string; photo_url?: string } }
   themeParams: Record<string, string>
   colorScheme: 'light' | 'dark'
+  platform?: string
+  version?: string
   HapticFeedback?: { impactOccurred: (s: 'light' | 'medium' | 'heavy') => void; notificationOccurred: (t: 'success' | 'error' | 'warning') => void; selectionChanged: () => void }
   BackButton?: { show: () => void; hide: () => void; onClick: (cb: () => void) => void; offClick: (cb: () => void) => void }
   MainButton?: { show: () => void; hide: () => void; setText: (t: string) => void; onClick: (cb: () => void) => void; offClick: (cb: () => void) => void; enable: () => void; disable: () => void }
   setHeaderColor: (c: string) => void
   setBackgroundColor: (c: string) => void
+  disableVerticalSwipes?: () => void
+  enableClosingConfirmation?: () => void
+  requestContact?: () => void
+  onEvent?: (event: string, cb: (data: any) => void) => void
+  offEvent?: (event: string, cb: (data: any) => void) => void
 }
 
 declare global { interface Window { Telegram?: { WebApp?: TgWebApp } } }
@@ -33,8 +40,18 @@ export function initTelegram() {
   try {
     tg.ready()
     tg.expand()
-    tg.setHeaderColor('#0E1116')
-    tg.setBackgroundColor('#0E1116')
+    tg.setHeaderColor('#0A1814')
+    tg.setBackgroundColor('#0A1814')
+    // Prevent accidental swipe-to-close mid-quiz
+    tg.disableVerticalSwipes?.()
+    // Confirm before close
+    tg.enableClosingConfirmation?.()
   } catch { /* noop */ }
   return tg
+}
+
+/** True when the page is rendered inside the Telegram app (not a regular browser). */
+export function isTelegram(): boolean {
+  const platform = getTg()?.platform
+  return !!platform && platform !== 'unknown'
 }

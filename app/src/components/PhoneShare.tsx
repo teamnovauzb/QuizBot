@@ -4,9 +4,10 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
+import toast from 'react-hot-toast'
 import { useStore } from '../store'
-import { requestTelegramContact, manualPhoneAccept, fmtPhone } from '../lib/phone'
-import { getTg, haptic, notify } from '../lib/telegram'
+import { requestTelegramContact, manualPhoneAccept, fmtPhone, markCached, saveContactToDb } from '../lib/phone'
+import { getTg } from '../lib/telegram'
 import { PhoneIcon, CheckBadgeIcon, SparkleIcon } from './Icons'
 import { Card, FilledButton } from './Shell'
 
@@ -31,13 +32,17 @@ export function PhoneShareCard() {
     const r = await requestTelegramContact()
     setBusy(false)
     if (r.ok && r.via === 'telegram') {
-      // Bot side will receive message.contact and update DB.
-      // We optimistically mark — the real phone arrives via hydrate.
-      setPhone(tgUser.id, '+998…')
+      const phone = r.phone || ''
+      if (phone) {
+        markCached(tgUser.id, phone)
+        setPhone(tgUser.id, phone)
+        await saveContactToDb(tgUser.id, phone)
+      }
+      toast.success(t('phone.thanks'))
     } else if (r.ok === false) {
       if (r.reason === 'unavailable') setManualMode(true)
-      else if (r.reason === 'cancelled') setError(t('phone.cancelled'))
-      else setError(t('phone.error'))
+      else if (r.reason === 'cancelled') toast(t('phone.cancelled'))
+      else toast.error(t('phone.error'))
     }
   }
 
@@ -45,10 +50,12 @@ export function PhoneShareCard() {
     if (!tgUser) return
     const r = manualPhoneAccept(manualVal)
     if (r.ok && r.via === 'manual') {
+      markCached(tgUser.id, r.phone)
       setPhone(tgUser.id, r.phone)
-      notify('success'); haptic('light')
+      saveContactToDb(tgUser.id, r.phone)
+      toast.success(t('phone.thanks'))
     } else {
-      setError(t('phone.invalid'))
+      toast.error(t('phone.invalid'))
     }
   }
 
@@ -107,7 +114,7 @@ export function PhoneShareCard() {
           </div>
         )}
 
-        {error && <div className="mt-3 text-xs text-[var(--danger)]">{error}</div>}
+        {error && <div className="mt-3 text-xs text-[var(--danger)] hidden">{error}</div>}
       </Card>
     </motion.div>
   )

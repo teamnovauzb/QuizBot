@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import toast from 'react-hot-toast'
 import { QUESTIONS, type Question } from '../data/questions'
 import * as api from '../lib/api'
 import * as api2 from '../lib/api2'
@@ -202,6 +203,7 @@ export const useStore = create<State>()(persist((set, get) => ({
   toggleBookmark: (questionId) => {
     const has = get().bookmarks.includes(questionId)
     set(s => ({ bookmarks: has ? s.bookmarks.filter(x => x !== questionId) : [questionId, ...s.bookmarks] }))
+    toast(has ? 'Bookmark olib tashlandi' : '★ Saqlandi', { icon: has ? '☆' : '★' })
     if (SUPABASE_ENABLED) fnf(api2.toggleBookmark(questionId, !has))
   },
   setPhone: (telegramId, phone) => {
@@ -212,6 +214,7 @@ export const useStore = create<State>()(persist((set, get) => ({
   unlockAchievement: (slug) => {
     if (get().unlockedAchievements.includes(slug)) return
     set(s => ({ unlockedAchievements: [slug, ...s.unlockedAchievements] }))
+    toast.success(`🏆 ${slug.replaceAll('_', ' ')}`, { duration: 4000 })
     if (SUPABASE_ENABLED) fnf(api2.unlockAchievement(slug))
   },
   log: (action, target) => {
