@@ -1,11 +1,12 @@
 import { useTranslation } from 'react-i18next'
 import { useStore } from '../store'
 import { haptic } from '../lib/telegram'
+import clsx from 'clsx'
 
 const LANGS = [
-  { code: 'uz', label: 'O‘Z' },
-  { code: 'ru', label: 'РУ' },
-  { code: 'en', label: 'EN' },
+  { code: 'uz', label: "O'z" },
+  { code: 'ru', label: 'Ру' },
+  { code: 'en', label: 'En' },
 ] as const
 
 export function LangSwitcher() {
@@ -14,15 +15,15 @@ export function LangSwitcher() {
   const cur = i18n.language as 'uz' | 'ru' | 'en'
 
   return (
-    <div className="inline-flex items-center rounded-full border border-[var(--hairline)] p-0.5 bg-[var(--paper-2)]">
+    <div className="inline-flex items-center rounded-2xl glass border border-[var(--hairline)] p-1">
       {LANGS.map(l => (
         <button
           key={l.code}
           onClick={() => { i18n.changeLanguage(l.code); setLanguage(l.code); haptic('light') }}
-          className={
-            'px-2.5 py-1 text-[11px] font-mono tracking-[0.18em] rounded-full transition-colors ' +
-            (cur === l.code ? 'bg-[var(--ink)] text-[var(--paper)]' : 'text-[var(--ink-soft)]')
-          }
+          className={clsx(
+            'px-2.5 py-1 text-xs font-semibold rounded-xl transition-colors',
+            cur === l.code ? 'bg-[var(--accent)] text-[var(--bg)]' : 'text-[var(--text-muted)]',
+          )}
         >
           {l.label}
         </button>

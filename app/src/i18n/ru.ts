@@ -66,15 +66,38 @@ export default {
   assignments: {
     empty: 'Нет активных заданий',
   },
-  profile: {
-    heatmap: 'Активность · 90 дн.',
-    byCategory: 'По разделам',
-  },
   difficulty: {
     easy: 'Лёгкий',
     medium: 'Средний',
     hard: 'Сложный',
   },
+  theme: {
+    light: 'Светлая',
+    dark: 'Тёмная',
+    auto: 'Авто',
+  },
+  phone: {
+    title: 'Подтвердите номер телефона',
+    subtitle: 'Поделитесь номером через Telegram для безопасности',
+    share: 'Поделиться',
+    cancelled: 'Отменено',
+    error: 'Ошибка',
+    invalid: 'Неверный номер',
+    manual: 'Вручную',
+    enterManual: 'Введите номер',
+  },
+  profile: {
+    heatmap: 'Активность · 90 дн.',
+    byCategory: 'По разделам',
+    phone: 'Телефон',
+    tgId: 'Telegram ID',
+    status: 'Статус',
+    notSet: 'Не задано',
+    verified: 'Подтверждено',
+    unverified: 'Не подтверждено',
+    share: 'Поделиться',
+    signOut: 'Выход',
+  } as any,
   quiz: {
     question: 'Вопрос',
     of: 'из',

@@ -18,6 +18,9 @@ export type AppUser = {
   blocked?: boolean
   joinedAt: number
   lastActive: number
+  phone?: string
+  phoneVerified?: boolean
+  photoUrl?: string
 }
 
 export type Group = {

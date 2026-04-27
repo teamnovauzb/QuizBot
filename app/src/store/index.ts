@@ -47,6 +47,8 @@ type State = {
   toggleBookmark: (questionId: string) => void
   unlockAchievement: (slug: string) => void
 
+  setPhone: (telegramId: number, phone: string) => void
+
   hydrateFromSupabase: () => Promise<void>
 }
 
@@ -201,6 +203,11 @@ export const useStore = create<State>()(persist((set, get) => ({
     const has = get().bookmarks.includes(questionId)
     set(s => ({ bookmarks: has ? s.bookmarks.filter(x => x !== questionId) : [questionId, ...s.bookmarks] }))
     if (SUPABASE_ENABLED) fnf(api2.toggleBookmark(questionId, !has))
+  },
+  setPhone: (telegramId, phone) => {
+    set(s => ({
+      users: s.users.map(u => u.telegramId === telegramId ? { ...u, phone, phoneVerified: true } : u),
+    }))
   },
   unlockAchievement: (slug) => {
     if (get().unlockedAchievements.includes(slug)) return

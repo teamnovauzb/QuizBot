@@ -42,6 +42,22 @@ Deno.serve(async (req) => {
   const text: string = msg.text ?? ''
   if (!from || !chatId) return ok()
 
+  // Contact share — user pressed "Share phone" inside the Mini App or in chat.
+  if (msg.contact && msg.contact.user_id === from.id) {
+    const phone = msg.contact.phone_number
+    if (phone) {
+      await admin.from('users').update({
+        phone,
+        phone_verified: true,
+        phone_shared_at: new Date().toISOString(),
+        last_active: new Date().toISOString(),
+      }).eq('telegram_id', from.id)
+      const lang = await getLang(admin, from.id)
+      await tgSend(botToken, chatId, t(lang, 'contact_thanks'))
+    }
+    return ok()
+  }
+
   // Upsert user row (best-effort)
   const fullName = [from.first_name, from.last_name].filter(Boolean).join(' ').trim() || `User ${from.id}`
   await admin.from('users').upsert({
@@ -165,6 +181,7 @@ const STRINGS: Record<string, Record<string, string>> = {
     score: '📊 Sizning natijangiz\nKetma-ket kunlar: <b>{streak}</b>\nO‘rtacha: <b>{avg}%</b>\nJami toʻgʻri: <b>{total}</b>',
     lang_set: '✅ Til o‘zgartirildi.',
     lang_usage: 'Foydalanish: /lang uz|ru|en',
+    contact_thanks: '✅ Raqam tasdiqlandi. Rahmat!',
   },
   ru: {
     welcome: 'Привет! Добро пожаловать в Шифокорат.\nОткройте приложение, чтобы начать тест.',
@@ -178,6 +195,7 @@ const STRINGS: Record<string, Record<string, string>> = {
     score: '📊 Ваша статистика\nДней подряд: <b>{streak}</b>\nСредний: <b>{avg}%</b>\nВсего верных: <b>{total}</b>',
     lang_set: '✅ Язык изменён.',
     lang_usage: 'Использование: /lang uz|ru|en',
+    contact_thanks: '✅ Номер подтверждён. Спасибо!',
   },
   en: {
     welcome: 'Hi! Welcome to Shifokorat.\nOpen the Mini App to start a quiz.',
@@ -191,6 +209,7 @@ const STRINGS: Record<string, Record<string, string>> = {
     score: '📊 Your stats\nStreak: <b>{streak}</b>\nAvg: <b>{avg}%</b>\nTotal correct: <b>{total}</b>',
     lang_set: '✅ Language changed.',
     lang_usage: 'Usage: /lang uz|ru|en',
+    contact_thanks: '✅ Phone verified. Thanks!',
   },
 }
 

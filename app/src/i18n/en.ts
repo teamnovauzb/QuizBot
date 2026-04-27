@@ -66,15 +66,38 @@ export default {
   assignments: {
     empty: 'No active assignments',
   },
-  profile: {
-    heatmap: 'Activity · 90d',
-    byCategory: 'By category',
-  },
   difficulty: {
     easy: 'Easy',
     medium: 'Medium',
     hard: 'Hard',
   },
+  theme: {
+    light: 'Light',
+    dark: 'Dark',
+    auto: 'Auto',
+  },
+  phone: {
+    title: 'Verify your phone',
+    subtitle: 'Share your phone via Telegram for account security',
+    share: 'Share',
+    cancelled: 'Cancelled',
+    error: 'Something went wrong',
+    invalid: 'Invalid number',
+    manual: 'Manual',
+    enterManual: 'Enter number',
+  },
+  profile: {
+    heatmap: 'Activity · 90d',
+    byCategory: 'By category',
+    phone: 'Phone',
+    tgId: 'Telegram ID',
+    status: 'Status',
+    notSet: 'Not set',
+    verified: 'Verified',
+    unverified: 'Unverified',
+    share: 'Share',
+    signOut: 'Sign out',
+  } as any,
   quiz: {
     question: 'Question',
     of: 'of',

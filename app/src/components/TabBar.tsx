@@ -7,29 +7,24 @@ export type Tab = { to: string; label: string; icon: ReactNode }
 
 export function TabBar({ tabs }: { tabs: Tab[] }) {
   return (
-    <nav className="sticky bottom-0 mt-auto z-30 pt-2 pb-[max(env(safe-area-inset-bottom),12px)] px-3 bg-[color-mix(in_oklab,var(--paper)_85%,transparent)] backdrop-blur-md border-t border-[var(--hairline)]">
-      <ul className="flex items-stretch justify-around gap-1">
+    <nav className="sticky bottom-0 mt-auto z-30 px-3 pt-2 pb-[max(env(safe-area-inset-bottom),12px)]">
+      <div className="glass-strong rounded-3xl px-1.5 py-1.5 flex items-stretch justify-around gap-0.5 shadow-[0_-8px_32px_-12px_rgba(0,0,0,0.4)]">
         {tabs.map(t => (
-          <li key={t.to} className="flex-1">
-            <NavLink
-              to={t.to}
-              onClick={() => haptic('light')}
-              className={({ isActive }) => clsx(
-                'flex flex-col items-center justify-center gap-1 py-2 rounded-xl transition-colors relative',
-                isActive ? 'text-[var(--ink)]' : 'text-[var(--ink-soft)] opacity-60',
-              )}
-            >
-              {({ isActive }) => (
-                <>
-                  <span className="block w-5 h-5">{t.icon}</span>
-                  <span className="text-[10px] font-mono uppercase tracking-[0.14em]">{t.label}</span>
-                  {isActive && <span className="absolute -top-px left-1/2 -translate-x-1/2 w-6 h-[2px] bg-[var(--accent)] rounded-full" />}
-                </>
-              )}
-            </NavLink>
-          </li>
+          <NavLink
+            key={t.to}
+            to={t.to}
+            end={t.to.endsWith('/u') || t.to.endsWith('/admin') || t.to.endsWith('/super')}
+            onClick={() => haptic('light')}
+            className={({ isActive }) => clsx(
+              'flex-1 flex flex-col items-center justify-center gap-0.5 py-2 rounded-2xl transition-colors relative',
+              isActive ? 'text-[var(--accent)] bg-[var(--accent-soft)]' : 'text-[var(--text-muted)]',
+            )}
+          >
+            <span className="block w-5 h-5">{t.icon}</span>
+            <span className="text-[10px] font-medium tracking-tight">{t.label}</span>
+          </NavLink>
         ))}
-      </ul>
+      </div>
     </nav>
   )
 }
