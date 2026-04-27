@@ -1,60 +1,16 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { QUESTIONS, type Question } from '../data/questions'
+import * as api from '../lib/api'
+import { SUPABASE_ENABLED } from '../lib/supabase'
+import type { AppUser, Attempt, AuditEntry, Group, Role, TelegramUser } from './types'
 
-export type Role = 'user' | 'admin' | 'superadmin'
-
-export type TelegramUser = {
-  id: number
-  first_name: string
-  last_name?: string
-  username?: string
-  language_code?: string
-  photo_url?: string
-}
-
-export type AppUser = {
-  telegramId: number
-  name: string
-  username?: string
-  role: Role
-  groupId?: string
-  blocked?: boolean
-  joinedAt: number
-  lastActive: number
-}
-
-export type Group = {
-  id: string
-  name: string
-  adminId: number
-  memberIds: number[]
-}
-
-export type Attempt = {
-  id: string
-  userId: number
-  startedAt: number
-  finishedAt: number
-  durationMs: number
-  questionIds: string[]
-  answers: { questionId: string; chosenIndex: number | null; correct: boolean; timeMs: number }[]
-  score: number
-  total: number
-  category?: string
-}
-
-export type AuditEntry = {
-  id: string
-  ts: number
-  actor: number
-  actorRole: Role
-  action: string
-  target?: string
-}
+export type { AppUser, Attempt, AuditEntry, Group, Role, TelegramUser } from './types'
 
 type State = {
   hydrated: boolean
+  syncing: boolean
+  syncError: string | null
   tgUser: TelegramUser | null
   currentRole: Role
   language: 'uz' | 'ru' | 'en'
@@ -84,9 +40,11 @@ type State = {
 
   saveAttempt: (a: Attempt) => void
   log: (action: string, target?: string) => void
+
+  hydrateFromSupabase: () => Promise<void>
 }
 
-// Seed roles deterministically: first telegram user is super, plus a few demo records
+// ─────────── seed data (used when Supabase is disabled) ───────────
 const seedUsers: AppUser[] = [
   { telegramId: 100001, name: 'Asadbek Karimov', username: 'asadbek', role: 'superadmin', joinedAt: Date.now() - 86400000 * 90, lastActive: Date.now() - 1000 * 60 * 12 },
   { telegramId: 200001, name: 'Dilnoza Yusupova', username: 'dilnoza_y', role: 'admin', joinedAt: Date.now() - 86400000 * 60, lastActive: Date.now() - 1000 * 60 * 45, groupId: 'g1' },
@@ -104,7 +62,6 @@ const seedGroups: Group[] = [
   { id: 'g2', name: 'Guruh 202 — Stomatologiya', adminId: 200002, memberIds: [300003, 300004, 300006] },
 ]
 
-// Seed attempts
 const seedAttempts: Attempt[] = []
 const userIds = [300001, 300002, 300003, 300004, 300006]
 for (let i = 0; i < 24; i++) {
@@ -126,8 +83,13 @@ for (let i = 0; i < 24; i++) {
   })
 }
 
+// fire-and-forget helper: log Supabase errors but never throw
+function fnf<T>(p: Promise<T>) { p.catch(e => console.warn('[supabase]', e)) }
+
 export const useStore = create<State>()(persist((set, get) => ({
   hydrated: false,
+  syncing: false,
+  syncError: null,
   tgUser: null,
   currentRole: 'user',
   language: 'uz',
@@ -150,6 +112,7 @@ export const useStore = create<State>()(persist((set, get) => ({
         lastActive: Date.now(),
       }
       set({ users: [...get().users, newUser], tgUser: u, currentRole: 'user' })
+      if (SUPABASE_ENABLED) fnf(api.upsertUserRow(newUser))
     } else {
       set({
         tgUser: u,
@@ -164,30 +127,67 @@ export const useStore = create<State>()(persist((set, get) => ({
     localStorage.setItem('lang', l)
   },
 
-  upsertUser: (u) => set(s => ({
-    users: s.users.find(x => x.telegramId === u.telegramId)
-      ? s.users.map(x => x.telegramId === u.telegramId ? u : x)
-      : [...s.users, u],
-  })),
+  upsertUser: (u) => {
+    set(s => ({
+      users: s.users.find(x => x.telegramId === u.telegramId)
+        ? s.users.map(x => x.telegramId === u.telegramId ? u : x)
+        : [...s.users, u],
+    }))
+    if (SUPABASE_ENABLED) fnf(api.upsertUserRow(u))
+  },
   removeUser: (id) => set(s => ({ users: s.users.filter(u => u.telegramId !== id) })),
-  setUserRole: (id, role) => set(s => ({ users: s.users.map(u => u.telegramId === id ? { ...u, role } : u) })),
-  toggleBlock: (id) => set(s => ({ users: s.users.map(u => u.telegramId === id ? { ...u, blocked: !u.blocked } : u) })),
-  assignGroup: (id, groupId) => set(s => ({ users: s.users.map(u => u.telegramId === id ? { ...u, groupId } : u) })),
+  setUserRole: (id, role) => {
+    set(s => ({ users: s.users.map(u => u.telegramId === id ? { ...u, role } : u) }))
+    if (SUPABASE_ENABLED) fnf(api.setRole(id, role))
+  },
+  toggleBlock: (id) => {
+    const cur = get().users.find(u => u.telegramId === id)
+    const next = !cur?.blocked
+    set(s => ({ users: s.users.map(u => u.telegramId === id ? { ...u, blocked: next } : u) }))
+    if (SUPABASE_ENABLED) fnf(api.setBlocked(id, next))
+  },
+  assignGroup: (id, groupId) => {
+    set(s => ({ users: s.users.map(u => u.telegramId === id ? { ...u, groupId } : u) }))
+    if (SUPABASE_ENABLED) fnf(api.setGroup(id, groupId ?? null))
+  },
 
   addGroup: (name, adminId) => {
-    const g: Group = { id: `g-${Date.now().toString(36)}`, name, adminId, memberIds: [] }
-    set(s => ({ groups: [...s.groups, g] }))
-    return g
+    const local: Group = { id: `g-${Date.now().toString(36)}`, name, adminId, memberIds: [] }
+    set(s => ({ groups: [...s.groups, local] }))
+    if (SUPABASE_ENABLED) {
+      api.createGroup(name, adminId).then(r => {
+        if (r.ok) set(s => ({ groups: s.groups.map(g => g.id === local.id ? r.data : g) }))
+      })
+    }
+    return local
   },
-  removeGroup: (id) => set(s => ({ groups: s.groups.filter(g => g.id !== id) })),
+  removeGroup: (id) => {
+    set(s => ({ groups: s.groups.filter(g => g.id !== id) }))
+    if (SUPABASE_ENABLED) fnf(api.deleteGroup(id))
+  },
 
-  addQuestion: (q) => set(s => ({
-    questions: [...s.questions, { ...q, id: `q-${Date.now().toString(36)}`, number: s.questions.length + 1 }],
-  })),
-  updateQuestion: (id, patch) => set(s => ({ questions: s.questions.map(q => q.id === id ? { ...q, ...patch } as Question : q) })),
-  removeQuestion: (id) => set(s => ({ questions: s.questions.filter(q => q.id !== id) })),
+  addQuestion: (q) => {
+    const local: Question = { ...q, id: `q-${Date.now().toString(36)}`, number: get().questions.length + 1 }
+    set(s => ({ questions: [...s.questions, local] }))
+    if (SUPABASE_ENABLED) {
+      api.createQuestion(q).then(r => {
+        if (r.ok) set(s => ({ questions: s.questions.map(x => x.id === local.id ? r.data : x) }))
+      })
+    }
+  },
+  updateQuestion: (id, patch) => {
+    set(s => ({ questions: s.questions.map(q => q.id === id ? { ...q, ...patch } as Question : q) }))
+    if (SUPABASE_ENABLED && !id.startsWith('q-')) fnf(api.updateQuestion(id, patch))
+  },
+  removeQuestion: (id) => {
+    set(s => ({ questions: s.questions.filter(q => q.id !== id) }))
+    if (SUPABASE_ENABLED && !id.startsWith('q-')) fnf(api.deleteQuestion(id))
+  },
 
-  saveAttempt: (a) => set(s => ({ attempts: [a, ...s.attempts] })),
+  saveAttempt: (a) => {
+    set(s => ({ attempts: [a, ...s.attempts] }))
+    if (SUPABASE_ENABLED) fnf(api.insertAttempt(a))
+  },
   log: (action, target) => {
     const u = get().tgUser
     if (!u) return
@@ -200,6 +200,33 @@ export const useStore = create<State>()(persist((set, get) => ({
       target,
     }
     set(s => ({ audit: [e, ...s.audit].slice(0, 200) }))
+    if (SUPABASE_ENABLED) fnf(api.logAudit(u.id, get().currentRole, action, target))
+  },
+
+  hydrateFromSupabase: async () => {
+    if (!SUPABASE_ENABLED) return
+    set({ syncing: true, syncError: null })
+    const [users, groups, questions, attempts, audit] = await Promise.all([
+      api.fetchUsers(),
+      api.fetchGroups(),
+      api.fetchQuestions(),
+      api.fetchAttempts(),
+      api.fetchAudit(),
+    ])
+    if (!users.ok) { set({ syncing: false, syncError: users.error }); return }
+    if (!groups.ok) { set({ syncing: false, syncError: groups.error }); return }
+    if (!questions.ok) { set({ syncing: false, syncError: questions.error }); return }
+    if (!attempts.ok) { set({ syncing: false, syncError: attempts.error }); return }
+    set({
+      users: users.data.length ? users.data : get().users,
+      groups: groups.data.length ? groups.data : get().groups,
+      questions: questions.data.length ? questions.data : get().questions,
+      attempts: attempts.data.length ? attempts.data : get().attempts,
+      audit: audit.ok ? audit.data : get().audit,
+      hydrated: true,
+      syncing: false,
+      syncError: null,
+    })
   },
 }), {
   name: 'shifokorat-state',

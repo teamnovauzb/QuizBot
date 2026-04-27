@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Entry from './screens/Entry'
 
@@ -21,7 +22,23 @@ import SuperAllUsers from './screens/superadmin/AllUsers'
 import SuperContent from './screens/superadmin/Content'
 import SuperBroadcast from './screens/superadmin/Broadcast'
 
+import { SUPABASE_ENABLED, supabase } from './lib/supabase'
+import { useStore } from './store'
+
 export default function App() {
+  const hydrate = useStore(s => s.hydrateFromSupabase)
+
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || !supabase) return
+    // Hydrate on auth state change (so after sign-in we pull data)
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) hydrate()
+    })
+    // Try once on mount in case a session is already present
+    supabase.auth.getSession().then(({ data }) => { if (data.session) hydrate() })
+    return () => sub.subscription.unsubscribe()
+  }, [hydrate])
+
   return (
     <Routes>
       <Route path="/" element={<Entry />} />

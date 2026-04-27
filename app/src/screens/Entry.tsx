@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useStore, type Role } from '../store'
@@ -6,6 +6,8 @@ import { initTelegram, haptic } from '../lib/telegram'
 import { Shell } from '../components/Shell'
 import { LangSwitcher } from '../components/LangSwitcher'
 import { ShieldIcon, UserIcon, UsersIcon, ArrowIcon, SparkleIcon } from '../components/Icons'
+import { signInWithTelegram } from '../lib/auth'
+import { SUPABASE_ENABLED } from '../lib/supabase'
 
 const DEMO_USERS = [
   { id: 100001, role: 'superadmin' as Role, name: 'Asadbek K.', tag: '@asadbek', sub: 'Bosh admin' },
@@ -19,18 +21,41 @@ export default function Entry() {
   const setTgUser = useStore(s => s.setTgUser)
   const tgUser = useStore(s => s.tgUser)
   const users = useStore(s => s.users)
+  const syncing = useStore(s => s.syncing)
+  const syncError = useStore(s => s.syncError)
+  const hydrated = useStore(s => s.hydrated)
+
+  const [authStatus, setAuthStatus] = useState<'idle' | 'signing-in' | 'signed-in' | 'failed'>('idle')
+  const [authError, setAuthError] = useState<string | null>(null)
 
   useEffect(() => {
     const tg = initTelegram()
     if (tg?.initDataUnsafe?.user) {
       setTgUser(tg.initDataUnsafe.user)
+      // If running inside Telegram and Supabase is configured, auth automatically.
+      if (SUPABASE_ENABLED && tg.initData) {
+        setAuthStatus('signing-in')
+        signInWithTelegram().then(r => {
+          if (r.ok) setAuthStatus('signed-in')
+          else { setAuthStatus('failed'); setAuthError(r.reason ?? 'unknown') }
+        })
+      }
     }
   }, [setTgUser])
 
-  function pick(id: number) {
+  async function pick(id: number) {
     haptic('medium')
     const u = users.find(u => u.telegramId === id)!
     setTgUser({ id: u.telegramId, first_name: u.name.split(' ')[0], last_name: u.name.split(' ').slice(1).join(' '), username: u.username })
+
+    // dev-mode auth (only works if edge function has ALLOW_DEV_LOGIN=true)
+    if (SUPABASE_ENABLED) {
+      setAuthStatus('signing-in')
+      const r = await signInWithTelegram(u.telegramId, u.name)
+      if (r.ok) setAuthStatus('signed-in')
+      else { setAuthStatus('failed'); setAuthError(r.reason ?? 'unknown') }
+    }
+
     if (u.role === 'superadmin') navigate('/super')
     else if (u.role === 'admin') navigate('/admin')
     else navigate('/u')
@@ -67,6 +92,26 @@ export default function Entry() {
           {t('home.motto')}. {t('home.welcome')} —{' '}
           <span className="font-display italic">102 savol</span>, 9 bo‘lim, 3 til.
         </p>
+
+        {/* Backend status badge */}
+        <div className="mt-4 inline-flex items-center gap-2">
+          <span className={
+            'w-1.5 h-1.5 rounded-full ' + (
+              !SUPABASE_ENABLED ? 'bg-[var(--ink-soft)] opacity-40' :
+              authStatus === 'signed-in' && hydrated ? 'bg-[#4ADE80]' :
+              authStatus === 'failed' ? 'bg-[#F87171]' :
+              'bg-[var(--accent)] animate-pulse'
+            )
+          } />
+          <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--ink-soft)] opacity-70">
+            {!SUPABASE_ENABLED && 'offline · localStorage'}
+            {SUPABASE_ENABLED && authStatus === 'idle' && 'supabase · ready'}
+            {SUPABASE_ENABLED && authStatus === 'signing-in' && 'supabase · signing in...'}
+            {SUPABASE_ENABLED && authStatus === 'signed-in' && (syncing ? 'supabase · syncing...' : hydrated ? 'supabase · live' : 'supabase · authed')}
+            {SUPABASE_ENABLED && authStatus === 'failed' && `supabase · ${authError}`}
+            {SUPABASE_ENABLED && syncError && ` · ${syncError.slice(0, 24)}`}
+          </span>
+        </div>
       </div>
 
       {/* HAIRLINE WITH ROMAN NUMERAL */}
@@ -137,7 +182,7 @@ export default function Entry() {
       {/* FOOTER */}
       <footer className="px-5 pt-6 pb-[max(env(safe-area-inset-bottom),20px)] flex items-center justify-between text-[10px] uppercase font-mono tracking-[0.22em] text-[var(--ink-soft)] opacity-60">
         <span>EST. 2026</span>
-        <span>v0.1 · ALPHA</span>
+        <span>v0.2 · BETA</span>
       </footer>
     </Shell>
   )

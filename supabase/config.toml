@@ -1,0 +1,10 @@
+project_id = "fmmvfbuooafapymviymo"
+
+[functions.tg-auth]
+verify_jwt = false
+
+[db]
+major_version = 15
+
+[auth]
+enable_signup = false

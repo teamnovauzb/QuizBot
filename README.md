@@ -1,17 +1,18 @@
 # Shifokorat — Telegram Mini App
 
-A 3-panel knowledge-quiz Mini App for Telegram (User · Admin · Super Admin), seeded with **102 informatics Q&A** from the source `savol_javoblar.docx`.
+A 3-panel knowledge-quiz Mini App for Telegram (User · Admin · Super Admin), seeded with **102 informatics Q&A** parsed from `savol_javoblar.docx`. Uses Supabase as backend (Postgres + Edge Function for Telegram auth) with graceful fallback to localStorage when env vars aren't set.
 
-> **⚠️ Bot token rotation:** the token shared during scaffolding (`8601…IhlQ`) should be revoked via @BotFather → `/revoke`, then stored as a Vercel env var (`VITE_BOT_TOKEN`) — it is not committed.
+> **⚠️ Bot token:** the token leaked during scaffolding (`8601…IhlQ`) **must be revoked** via @BotFather → `/revoke`, then stored as a Supabase Edge Function secret named `TELEGRAM_BOT_TOKEN`. It never goes into the client bundle.
 
 ## Stack
 
 - **Vite 8 + React 19 + TypeScript**
 - **Tailwind CSS v4** (zero-config, `@tailwindcss/vite`)
 - **Framer Motion** for spring transitions, page reveals, ring animations
-- **Zustand** + `persist` middleware → state in `localStorage` until backend lands
+- **Zustand** + `persist` middleware → localStorage + (when configured) Supabase mirror
 - **i18next** with `uz / ru / en` (auto-detected from Telegram `language_code`)
 - **`@twa-dev/sdk`** + native `window.Telegram.WebApp` for haptics, theme, expand
+- **Supabase** for Postgres, RLS, Edge Functions
 - **Instrument Serif** (display) + **Geist** (body) + **Geist Mono** (labels)
 
 ## Design direction
@@ -27,92 +28,193 @@ Editorial / scholastic — deep ink (`#0E1116`) base with cream paper light mode
 - **History:** grouped by date with score + duration
 - **Profile:** identity, lang switcher, role-switch shortcuts if elevated
 
-### Admin (`/admin`) — all User features plus:
+### Admin (`/admin`)
 - **Overview:** active users / questions / avg / completed + 7-day trend bars + recent attempts table
 - **Questions:** searchable, filterable list with bottom-sheet editor (text, category pills, A–D options, correct-answer toggle)
 - **Users:** members of admin's group only, with block/unblock
 
-### Super Admin (`/super`) — all Admin features plus:
+### Super Admin (`/super`)
 - **Overview:** activity heatmap (7d × 24h), audit log, role distribution bars
 - **Admins:** promote users to admin or add by Telegram ID + name; demote
 - **Users:** all users, filter by role, block/promote/demote
 - **Content:** full question bank CRUD
 - **Broadcast:** title + body + recipient mode (all / admins / users), preview card, send confirmation toast
 
-## Run locally
+---
+
+## Quickstart (local)
 
 ```bash
 cd app
 npm install
-npm run dev    # → http://localhost:5173
+cp .env.example .env       # then fill VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY
+npm run dev                # → http://localhost:5173
 ```
 
-The app uses the demo-role picker in development (no Telegram required). Inside Telegram, the user's TG ID is matched against the seeded user list to auto-route.
+The app boots in **offline mode** if the env vars are missing — full demo on localStorage. With env set, it tries to authenticate with Supabase via the `tg-auth` edge function.
 
-## Build
+## Supabase setup
+
+The `supabase/` folder contains everything:
+
+```
+supabase/
+├── config.toml
+├── migrations/
+│   ├── 0001_schema.sql      tables, indexes, RLS policies, helper functions
+│   └── 0002_seed.sql        102 questions + 9 demo users + 2 groups
+└── functions/
+    ├── _shared/cors.ts
+    └── tg-auth/index.ts     verifies Telegram initData HMAC, mints Supabase JWT
+```
+
+### 1. Apply the schema + seed
+
+Open the [Supabase SQL Editor](https://supabase.com/dashboard/project/_/sql) for your project and paste, in order:
+
+1. `supabase/migrations/0001_schema.sql`
+2. `supabase/migrations/0002_seed.sql`
+
+(Or with the CLI: `supabase db push` once linked.)
+
+### 2. Deploy the `tg-auth` edge function
 
 ```bash
-cd app
-npm run build  # → app/dist
+# install once
+npm i -g supabase
+
+# from repo root
+supabase login
+supabase link --project-ref fmmvfbuooafapymviymo
+supabase functions deploy tg-auth --no-verify-jwt
 ```
 
-## Deploy (Vercel)
+### 3. Set edge function secrets
 
-The repo root has a `vercel.json` that builds from `app/` and sets up SPA rewrites. Either:
+```bash
+supabase secrets set \
+  TELEGRAM_BOT_TOKEN="<rotated-bot-token-from-BotFather>" \
+  ALLOW_DEV_LOGIN="true"
+```
 
-1. **CLI:** `vercel` from the repo root, or
-2. **Dashboard:** import the repo, leave settings on auto — `vercel.json` handles it.
+`ALLOW_DEV_LOGIN=true` is required for the demo-role picker to work outside Telegram. **Set it to `false` (or unset) before going to production.**
+
+### 4. (Optional) Lock down anon key access
+
+The `sb_publishable_…` anon key is safe in the client because every table is gated by RLS. Verify policies in the SQL editor:
+
+```sql
+select tablename, policyname from pg_policies where schemaname = 'public';
+```
+
+## Auth flow
+
+```
+┌─ Frontend ─────────────────────────────────────────────────┐
+│  Inside Telegram WebApp:                                  │
+│    1. Read window.Telegram.WebApp.initData                │
+│    2. POST { initData } → /functions/v1/tg-auth          │
+│                                                          │
+│  Outside Telegram (dev mode, ALLOW_DEV_LOGIN=true):       │
+│    1. Pick a demo role on Entry screen                    │
+│    2. POST { telegram_id, first_name } → tg-auth          │
+└────────────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─ Edge Function (tg-auth) ─────────────────────────────────┐
+│  • Verifies initData HMAC against TELEGRAM_BOT_TOKEN      │
+│    (rejects if hash invalid or auth_date > 24h old)      │
+│  • Upserts row in public.users with auth_uid linkage      │
+│  • Signs a Supabase JWT with deterministic email/password│
+│  • Returns { access_token, refresh_token, user }          │
+└────────────────────────────────────────────────────────────┘
+                         │
+                         ▼
+┌─ Frontend ─────────────────────────────────────────────────┐
+│  • supabase.auth.setSession(...)                          │
+│  • Listener triggers `hydrateFromSupabase()`              │
+│  • All subsequent queries are RLS-gated by auth_uid       │
+└────────────────────────────────────────────────────────────┘
+```
+
+## RLS overview (see `0001_schema.sql`)
+
+| Table        | User can…           | Admin can…              | Super can…                    |
+| ------------ | ------------------- | ----------------------- | ----------------------------- |
+| `users`      | read self           | read all, block/unblock | full CRUD                     |
+| `groups`     | read                | read                    | full CRUD                     |
+| `questions`  | read active         | full CRUD               | full CRUD                     |
+| `attempts`   | full CRUD on self   | read all                | read all                      |
+| `audit`      | insert (own)        | —                       | read                          |
+| `broadcasts` | —                   | —                       | full CRUD                     |
+
+Helper SQL functions: `tg_id()`, `is_role(r)`, `is_admin_or_super()`, `is_super()`.
+
+## Deploy frontend (Vercel)
+
+`vercel.json` at repo root builds from `app/` and rewrites SPA paths.
+
+```bash
+vercel       # or import repo via dashboard
+```
+
+Add the same env vars in Vercel → Project → Settings → Environment Variables:
+
+```
+VITE_SUPABASE_URL=https://fmmvfbuooafapymviymo.supabase.co
+VITE_SUPABASE_ANON_KEY=sb_publishable_…
+```
 
 After deploy, set the Mini App URL via @BotFather:
 
 ```
-/mybots → @shifokoratbot → Bot Settings → Menu Button → Configure Menu Button
+/mybots → @shifokoratbot → Bot Settings → Menu Button
 URL: https://<your-vercel-domain>/
 ```
 
-## State seeding
-
-On first load the persisted store is populated with:
-- 102 questions parsed from `savol_javoblar.docx` (each with 3 distractors picked from same-category answers)
-- 9 demo users across all roles
-- 2 groups
-- 24 sample attempts spread over the past 12 days
-
-To wipe: `localStorage.removeItem('shifokorat-state')` in the browser devtools.
-
-## Backend hand-off
-
-When the backend is ready, replace these store actions with API calls:
-
-| Store action | Endpoint shape |
-| --- | --- |
-| `setTgUser` | `POST /auth/telegram` → returns role |
-| `addQuestion / updateQuestion / removeQuestion` | `/questions` |
-| `setUserRole / toggleBlock / assignGroup` | `/users/:id` |
-| `addGroup / removeGroup` | `/groups` |
-| `saveAttempt` | `POST /attempts` |
-| `log` | `POST /audit` (optional, server-driven) |
-
-The store interfaces in `src/store/index.ts` are the contract.
-
-## Files
+## Project layout
 
 ```
-app/
-  src/
-    data/           seed.json + questions.ts (Q&A → MCQ)
-    i18n/           uz / ru / en
-    lib/            telegram.ts, time.ts
-    store/          Zustand persisted store
-    components/     Shell, TabBar, LangSwitcher, Icons
-    screens/
-      Entry.tsx     role picker
-      user/         Home, Quiz, Result, History, Profile, UserLayout
-      admin/        Overview, Questions, Users, Profile, AdminLayout
-      superadmin/   Overview, Admins, AllUsers, Content, Broadcast, SuperLayout
-    App.tsx
-    main.tsx
-    index.css       Tailwind v4 theme + custom CSS vars
-  index.html        loads telegram-web-app.js + fonts
-vercel.json         build & SPA rewrites
+.
+├── app/                          frontend
+│   ├── src/
+│   │   ├── data/                 seed.json + questions.ts (Q&A → MCQ)
+│   │   ├── i18n/                 uz / ru / en
+│   │   ├── lib/                  supabase.ts, auth.ts, api.ts, telegram.ts, time.ts
+│   │   ├── store/                Zustand store + types (mirrors writes to Supabase)
+│   │   ├── components/           Shell, TabBar, LangSwitcher, Icons
+│   │   └── screens/
+│   │       ├── Entry.tsx         role picker + connection status
+│   │       ├── user/             Home, Quiz, Result, History, Profile
+│   │       ├── admin/            Overview, Questions, Users
+│   │       └── superadmin/       Overview, Admins, AllUsers, Content, Broadcast
+│   ├── .env.example
+│   └── index.html
+├── supabase/                     backend
+│   ├── config.toml
+│   ├── migrations/
+│   │   ├── 0001_schema.sql
+│   │   └── 0002_seed.sql
+│   └── functions/
+│       ├── _shared/cors.ts
+│       └── tg-auth/index.ts
+├── savol_javoblar.docx           source (102 Q&A)
+└── vercel.json
 ```
+
+## Troubleshooting
+
+**Connection badge says `supabase · http_404…`**
+The `tg-auth` function isn't deployed. Run `supabase functions deploy tg-auth --no-verify-jwt`.
+
+**`supabase · invalid_init_data`**
+Bot token mismatch or 24h-stale `initData`. Re-open the Mini App from a fresh Telegram launch and check `TELEGRAM_BOT_TOKEN` matches the bot serving the Mini App.
+
+**`supabase · no_init_data` outside Telegram**
+Set the edge function secret `ALLOW_DEV_LOGIN=true` and use the demo-role picker on the Entry screen.
+
+**RLS blocks query**
+Open the SQL editor and run `select public.tg_id()` while authed — should return your `telegram_id`. If null, the user row isn't linked to the auth user; re-trigger `tg-auth`.
+
+**Reset all local state**
+DevTools console: `localStorage.clear(); location.reload()`.
