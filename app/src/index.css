@@ -1,0 +1,157 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+
+  --color-ink-50: #F7F5EE;
+  --color-ink-100: #EFEBDF;
+  --color-ink-200: #DDD6C2;
+  --color-ink-300: #B8AE91;
+  --color-ink-400: #6B6353;
+  --color-ink-500: #393528;
+  --color-ink-600: #221F18;
+  --color-ink-700: #16140F;
+  --color-ink-800: #0E1116;
+  --color-ink-900: #08090C;
+
+  --color-coral-300: #FF8A6B;
+  --color-coral-400: #FF6B47;
+  --color-coral-500: #FF5C3D;
+  --color-coral-600: #E0431F;
+
+  --color-amber-warm: #E8B14A;
+  --color-success: #4ADE80;
+  --color-danger: #F87171;
+
+  --shadow-paper: 0 1px 0 rgb(0 0 0 / 0.04), 0 1px 3px rgb(0 0 0 / 0.06), 0 8px 24px -8px rgb(0 0 0 / 0.08);
+  --shadow-paper-dark: 0 1px 0 rgb(255 255 255 / 0.03), 0 1px 3px rgb(0 0 0 / 0.4), 0 8px 24px -8px rgb(0 0 0 / 0.6);
+}
+
+:root {
+  color-scheme: light dark;
+  --tg-bg: var(--tg-theme-bg-color, #F7F5EE);
+  --tg-text: var(--tg-theme-text-color, #0E1116);
+  --tg-hint: var(--tg-theme-hint-color, #6B6353);
+  --tg-link: var(--tg-theme-link-color, #FF5C3D);
+  --tg-button: var(--tg-theme-button-color, #0E1116);
+  --tg-secondary-bg: var(--tg-theme-secondary-bg-color, #EFEBDF);
+
+  --paper: #F7F5EE;
+  --paper-2: #EFEBDF;
+  --ink: #0E1116;
+  --ink-soft: #393528;
+  --hairline: #DDD6C2;
+  --accent: #FF5C3D;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0E1116;
+    --paper-2: #16140F;
+    --ink: #F7F5EE;
+    --ink-soft: #DDD6C2;
+    --hairline: #221F18;
+    --accent: #FF6B47;
+  }
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--paper);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'ss01', 'cv11';
+  overscroll-behavior-y: none;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+  min-height: 100dvh;
+}
+
+/* Paper grain overlay - subtle texture */
+.grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.7 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+@media (prefers-color-scheme: dark) {
+  .grain::before { opacity: 0.06; mix-blend-mode: screen; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--hairline); border-radius: 3px; }
+
+/* Headings */
+.font-display { font-family: var(--font-display); font-weight: 400; letter-spacing: -0.01em; }
+.font-mono { font-family: var(--font-mono); }
+
+/* Hairline divider with serif notch */
+.hairline {
+  height: 1px;
+  background: var(--hairline);
+  position: relative;
+}
+
+/* Number plate (used for question count, scores) */
+.numerals { font-family: var(--font-display); font-feature-settings: 'lnum'; font-variant-numeric: lining-nums; }
+
+/* Selection */
+::selection { background: var(--accent); color: var(--paper); }
+
+/* Buttons base reset */
+button { font-family: inherit; }
+
+/* Hide scroll on quiz screens */
+.no-scroll { overflow: hidden; }
+
+/* Smooth touch scrolling */
+* { -webkit-tap-highlight-color: transparent; }
+
+/* Fade-in for screen mounts */
+@keyframes paperRise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.paper-rise { animation: paperRise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+
+@keyframes inkBleed {
+  from { opacity: 0; letter-spacing: 0.05em; }
+  to { opacity: 1; letter-spacing: -0.01em; }
+}
+.ink-bleed { animation: inkBleed 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+
+@keyframes ringSweep {
+  from { stroke-dashoffset: var(--ring-circ); }
+}
+.ring-sweep { animation: ringSweep 1s linear forwards; }
+
+/* Input style */
+input, textarea, select {
+  font-family: inherit;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: inherit;
+}
+
+/* Hide telegram default scroll bounce on root */
+html { overscroll-behavior: none; }
