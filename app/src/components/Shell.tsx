@@ -23,7 +23,7 @@ export function PageHeader({ eyebrow, title, right }: { eyebrow?: string; title:
   return (
     <header
       className="px-5 pb-3 flex items-end justify-between gap-3 fade-up"
-      style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 40px)' }}
+      style={{ paddingTop: 'calc(max(env(safe-area-inset-top, 0px), 24px) + 40px)' }}
     >
       <div className="min-w-0 flex-1">
         {eyebrow && (
