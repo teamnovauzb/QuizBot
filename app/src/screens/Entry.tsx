@@ -6,25 +6,17 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
-import { motion, AnimatePresence } from 'framer-motion'
 
-import { useStore, type Role } from '../store'
+import { useStore } from '../store'
 import { initTelegram, haptic, isTelegram } from '../lib/telegram'
 import { Shell } from '../components/Shell'
 import { LangSwitcher } from '../components/LangSwitcher'
 import {
-  ArrowIcon, BookIcon, ChartIcon, FlameIcon, PhoneIcon, SparkleIcon,
-  CheckBadgeIcon, XIcon, ShieldIcon, UserIcon, UsersIcon,
+  ArrowIcon, BookIcon, ChartIcon, FlameIcon, PhoneIcon, SparkleIcon, CheckBadgeIcon,
 } from '../components/Icons'
 import {
   requestTelegramContact, manualPhoneAccept, fmtPhone, markCached, saveContactToDb, isCachedShared,
 } from '../lib/phone'
-
-const DEMO_USERS = [
-  { id: 100001, role: 'superadmin' as Role, name: 'Asadbek K.', username: 'asadbek' },
-  { id: 200001, role: 'admin' as Role, name: 'Dilnoza Y.', username: 'dilnoza_y' },
-  { id: 300001, role: 'user' as Role, name: 'Madina I.', username: 'madinai' },
-]
 
 export default function Entry() {
   const navigate = useNavigate()
@@ -36,7 +28,6 @@ export default function Entry() {
 
   const [busy, setBusy] = useState(false)
   const [showManual, setShowManual] = useState(false)
-  const [showDevPicker, setShowDevPicker] = useState(false)
   const [phoneVal, setPhoneVal] = useState('+998 ')
 
   // 1. Connect Telegram on mount
@@ -98,22 +89,6 @@ export default function Entry() {
     }
   }
 
-  function pickDemo(d: typeof DEMO_USERS[number]) {
-    haptic('medium')
-    setTgUser({
-      id: d.id,
-      first_name: d.name.split(' ')[0],
-      last_name: d.name.split(' ').slice(1).join(' '),
-      username: d.username,
-    })
-    if (d.role === 'superadmin') navigate('/super')
-    else if (d.role === 'admin') navigate('/admin')
-    else {
-      markCached(d.id, '+998 99 999 99 99')
-      setPhone(d.id, '+998 99 999 99 99')
-      navigate('/u')
-    }
-  }
 
   return (
     <Shell>
@@ -168,15 +143,6 @@ export default function Entry() {
                   {t('entry.manualLink')}
                 </button>
               )}
-              {/* Dev escape hatch — only in dev builds */}
-              {import.meta.env.DEV && (
-                <button
-                  onClick={() => setShowDevPicker(true)}
-                  className="mt-2 w-full text-[10px] uppercase tracking-[0.22em] font-mono text-[var(--text-dim)]"
-                >
-                  · dev: select role ·
-                </button>
-              )}
             </>
           ) : (
             <div className="space-y-3">
@@ -213,52 +179,6 @@ export default function Entry() {
         </div>
       </div>
 
-      {/* Dev role picker — bottom sheet */}
-      <AnimatePresence>
-        {showDevPicker && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 grid place-items-end bg-black/40"
-            onClick={() => setShowDevPicker(false)}
-          >
-            <motion.div
-              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 30, stiffness: 280 }}
-              className="w-full bg-[var(--bg)] glass-strong rounded-t-3xl pb-[max(env(safe-area-inset-bottom),24px)] pt-3"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="w-10 h-1 rounded-full bg-[var(--hairline-strong)] mx-auto mb-3" />
-              <div className="px-5 pb-3 flex items-center justify-between">
-                <h3 className="font-display font-bold text-lg">Dev · pick role</h3>
-                <button onClick={() => setShowDevPicker(false)} className="w-9 h-9 rounded-full glass border border-[var(--hairline-strong)] grid place-items-center">
-                  <XIcon className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="px-5 space-y-2">
-                {DEMO_USERS.map(d => {
-                  const Icon = d.role === 'superadmin' ? ShieldIcon : d.role === 'admin' ? UsersIcon : UserIcon
-                  return (
-                    <button
-                      key={d.id}
-                      onClick={() => pickDemo(d)}
-                      className="w-full rounded-2xl glass border border-[var(--hairline-strong)] p-3 flex items-center gap-3 active:scale-[0.99]"
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-[var(--accent-soft)] grid place-items-center text-[var(--accent)]">
-                        <Icon className="w-5 h-5" />
-                      </div>
-                      <div className="flex-1 min-w-0 text-left">
-                        <div className="font-display font-bold text-sm">{t(`role.${d.role}`)}</div>
-                        <div className="text-xs text-[var(--text-muted)] font-mono truncate">{d.name} · @{d.username}</div>
-                      </div>
-                      <ArrowIcon className="w-4 h-4 stroke-[var(--text-muted)]" />
-                    </button>
-                  )
-                })}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </Shell>
   )
 }
