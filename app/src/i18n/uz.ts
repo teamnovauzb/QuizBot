@@ -98,6 +98,13 @@ export default {
     s2: { title: 'Har kuni bir qadam', desc: 'Ketma-ket kunlar (streak), aniqlik foizi va yutuqlar bilan oʻzingizni motivatsiya qiling.' },
     s3: { title: 'Reyting va tahlil', desc: 'Guruhda yoki global reytingda oʻrnaingizni koʻring. Statistika oʻsishini kuzating.' },
   },
+  entry: {
+    shareCta: 'Telefon raqamini ulashish',
+    manualLink: 'Telegramsiz davom etish',
+    f1: { title: '102 ta savol', desc: '9 boʻlim · informatika' },
+    f2: { title: 'Streak va yutuqlar', desc: 'Har kuni bir qadam' },
+    f3: { title: 'Reyting va tahlil', desc: 'Statistika va guruh oʻrni' },
+  },
   profile: {
     heatmap: 'Faollik · 90 kun',
     byCategory: 'Boʻlimlar boʻyicha',

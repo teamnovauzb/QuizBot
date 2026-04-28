@@ -98,6 +98,13 @@ export default {
     s2: { title: 'One step every day', desc: 'Build a streak, track accuracy, and unlock achievements.' },
     s3: { title: 'Leaderboard and stats', desc: 'See where you stand in your group or globally. Watch progress grow.' },
   },
+  entry: {
+    shareCta: 'Share phone number',
+    manualLink: 'Continue without Telegram',
+    f1: { title: '102 questions', desc: '9 categories · informatics' },
+    f2: { title: 'Streaks & achievements', desc: 'One step every day' },
+    f3: { title: 'Leaderboard & stats', desc: 'Group and global' },
+  },
   profile: {
     heatmap: 'Activity · 90d',
     byCategory: 'By category',
