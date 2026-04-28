@@ -41,8 +41,9 @@ import SuperGroups from './screens/superadmin/Groups'
 
 import { SUPABASE_ENABLED, supabase } from './lib/supabase'
 import { useStore } from './store'
-import { isTelegram } from './lib/telegram'
+import { isTelegram, getTg } from './lib/telegram'
 import { isCachedShared, markCached } from './lib/phone'
+import { signInWithTelegram } from './lib/auth'
 
 import { SplashScreen } from './components/SplashScreen'
 import { Onboarding } from './components/Onboarding'
@@ -70,6 +71,8 @@ function PhoneGateGuard({ children }: { children: React.ReactNode }) {
 export default function App() {
   const hydrate = useStore(s => s.hydrateFromSupabase)
   const tgUser = useStore(s => s.tgUser)
+  const setTgUser = useStore(s => s.setTgUser)
+  const signedOut = useStore(s => s.signedOut)
 
   // Splash + Onboarding state
   const [showSplash, setShowSplash] = useState(() => !sessionStorage.getItem(SPLASH_KEY))
@@ -83,6 +86,46 @@ export default function App() {
     supabase.auth.getSession().then(({ data }) => { if (data.session) hydrate() })
     return () => sub.subscription.unsubscribe()
   }, [hydrate])
+
+  // Bootstrap Supabase auth from Telegram initData on every app load.
+  // Without this, the WebApp has no JWT → RLS rejects all writes (attempts,
+  // bookmarks, etc.) silently and the user appears nowhere on the leaderboard.
+  // We re-mint the session even when one exists, since refresh tokens expire
+  // after 7 days and we want a fresh session per launch.
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || !supabase) return
+    if (signedOut) return
+
+    let cancelled = false
+    ;(async () => {
+      const tg = getTg()
+      if (!tg?.initData) return // not inside Telegram, skip
+
+      // Skip if we already have a non-expired session
+      const { data: existing } = await supabase!.auth.getSession()
+      const expSec = existing.session?.expires_at ?? 0
+      const stillValid = expSec * 1000 > Date.now() + 60_000 // 60s slack
+      if (stillValid) return
+      if (cancelled) return
+
+      const r = await signInWithTelegram()
+      if (cancelled || !r.ok) {
+        if (!r.ok) console.warn('[auth] tg signin failed:', r.reason)
+        return
+      }
+      // Mirror the authenticated identity into the local store so RLS-scoped
+      // writes (saveAttempt, etc.) and queries align with the JWT's tg_id.
+      if (r.telegram_id) {
+        setTgUser({
+          id: r.telegram_id,
+          first_name: r.first_name ?? '',
+          last_name: r.last_name,
+          username: r.username,
+        })
+      }
+    })()
+    return () => { cancelled = true }
+  }, [signedOut, setTgUser])
 
   // Trigger onboarding for first-time users (after splash)
   useEffect(() => {

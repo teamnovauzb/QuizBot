@@ -208,7 +208,32 @@ export const useStore = create<State>()(persist((set, get) => ({
 
   saveAttempt: (a) => {
     set(s => ({ attempts: [a, ...s.attempts] }))
-    if (SUPABASE_ENABLED) fnf(api.insertAttempt(a))
+    if (!SUPABASE_ENABLED) return
+    // Insert attempt; if RLS rejects (expired JWT, no session), refresh the
+    // Telegram-WebApp signin and retry once. Anything still failing surfaces
+    // a toast so the user knows their result didn't sync.
+    void (async () => {
+      let r = await api.insertAttempt(a)
+      if (!r.ok) {
+        const msg = (r.error || '').toLowerCase()
+        const looksAuthy =
+          msg.includes('jwt') || msg.includes('row-level') || msg.includes('row level') ||
+          msg.includes('401') || msg.includes('not authenticated') || msg.includes('permission')
+        if (looksAuthy) {
+          try {
+            const auth = await import('../lib/auth')
+            const re = await auth.signInWithTelegram()
+            if (re.ok) r = await api.insertAttempt(a)
+          } catch (e) {
+            console.warn('[saveAttempt] reauth threw', e)
+          }
+        }
+      }
+      if (!r.ok) {
+        console.warn('[saveAttempt] failed:', r.error)
+        toast.error('Sinov saqlanmadi · ' + (r.error?.slice(0, 60) || 'unknown'))
+      }
+    })()
   },
 
   toggleBookmark: (questionId) => {
