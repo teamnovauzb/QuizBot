@@ -4,9 +4,12 @@ import uz from './uz'
 import ru from './ru'
 import en from './en'
 
+// Default language is ALWAYS Uzbek unless the user has explicitly chosen
+// another in Settings. We intentionally don't auto-switch based on
+// Telegram's `language_code` — many target users have their phone in
+// Russian but want the app in Uzbek.
 const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('lang') : null
-const tgLang = (typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.language_code) as string | undefined
-const detected = stored || (tgLang === 'ru' ? 'ru' : tgLang === 'en' ? 'en' : 'uz')
+const detected: 'uz' | 'ru' | 'en' = stored === 'ru' || stored === 'en' ? stored : 'uz'
 
 i18n.use(initReactI18next).init({
   resources: {

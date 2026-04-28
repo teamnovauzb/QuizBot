@@ -18,6 +18,8 @@ type TgWebApp = {
   requestContact?: () => void
   onEvent?: (event: string, cb: (data: any) => void) => void
   offEvent?: (event: string, cb: (data: any) => void) => void
+  showConfirm?: (message: string, cb: (ok: boolean) => void) => void
+  showAlert?: (message: string, cb?: () => void) => void
 }
 
 declare global { interface Window { Telegram?: { WebApp?: TgWebApp } } }
@@ -54,4 +56,22 @@ export function initTelegram() {
 export function isTelegram(): boolean {
   const platform = getTg()?.platform
   return !!platform && platform !== 'unknown'
+}
+
+/**
+ * Cross-platform confirm. Telegram WebApp blocks `window.confirm` on
+ * iOS, so we route to its native `showConfirm` when present, falling
+ * back to the browser dialog otherwise.
+ */
+export function confirmDialog(message: string): Promise<boolean> {
+  const tg = getTg()
+  if (tg && typeof tg.showConfirm === 'function') {
+    return new Promise(resolve => {
+      try { tg.showConfirm!(message, (ok: boolean) => resolve(!!ok)) }
+      catch { resolve(true) }
+    })
+  }
+  // browser fallback
+  try { return Promise.resolve(window.confirm(message)) }
+  catch { return Promise.resolve(true) }
 }

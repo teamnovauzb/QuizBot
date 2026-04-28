@@ -15,7 +15,7 @@ import { Heatmap } from '../../components/Heatmap'
 import { Ring } from '../../components/Ring'
 import { CATEGORIES } from '../../data/questions'
 import { fmtPhone } from '../../lib/phone'
-import { haptic } from '../../lib/telegram'
+import { haptic, confirmDialog } from '../../lib/telegram'
 
 export default function Profile() {
   const { t } = useTranslation()
@@ -28,6 +28,7 @@ export default function Profile() {
   const groups = useStore(s => s.groups)
   const myGroup = groups.find(g => g.id === me?.groupId)
   const photoUrl = (tgUser as any)?.photo_url as string | undefined
+  const signOut = useStore(s => s.signOut)
 
   const streak = useMemo(() => {
     if (!attempts.length) return 0
@@ -226,7 +227,16 @@ export default function Profile() {
           <button onClick={shareToTelegram} className="rounded-2xl py-3.5 glass border border-[var(--hairline-strong)] text-sm font-display font-semibold flex items-center justify-center gap-2 active:scale-[0.99]">
             <SendIcon className="w-4 h-4" /> {t('profile.share')}
           </button>
-          <button onClick={() => navigate('/')} className="rounded-2xl py-3.5 glass border border-[var(--hairline-strong)] text-sm font-display font-semibold text-[var(--text-muted)] flex items-center justify-center gap-2 active:scale-[0.99]">
+          <button
+            onClick={async () => {
+              haptic('medium')
+              const ok = await confirmDialog(t('profile.signOutConfirm'))
+              if (!ok) return
+              signOut()
+              navigate('/', { replace: true })
+            }}
+            className="rounded-2xl py-3.5 glass border border-[var(--hairline-strong)] text-sm font-display font-semibold text-[var(--text-muted)] flex items-center justify-center gap-2 active:scale-[0.99]"
+          >
             <LogoutIcon className="w-4 h-4" /> {t('profile.signOut')}
           </button>
         </div>
