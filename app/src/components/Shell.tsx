@@ -24,12 +24,13 @@ export function PageHeader({ eyebrow, title, right }: { eyebrow?: string; title:
     <header
       className="px-5 pb-3 flex items-end justify-between gap-3 fade-up"
       style={{
-        // `--tg-content-top` is set by initTelegram() to the larger of
-        // device safe-area-inset and Telegram's contentSafeAreaInset.top.
+        // `--tg-content-top` = absolute distance from top of Mini App window
+        // that clears device status bar + Telegram's floating UI (Close
+        // button, ⋯ menu, drag handle). Set by initTelegram() at startup.
         // On non-Telegram browsers it's unset → falls back to env() inset.
-        // Plus 24px breathing room below whatever inset wins.
+        // +20px breathing room below whatever inset wins.
         paddingTop:
-          'calc(max(var(--tg-content-top, env(safe-area-inset-top, 0px)), 12px) + 24px)',
+          'calc(max(var(--tg-content-top, env(safe-area-inset-top, 0px)), 16px) + 20px)',
       }}
     >
       <div className="min-w-0 flex-1">

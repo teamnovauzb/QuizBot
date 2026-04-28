@@ -81,29 +81,45 @@ function setTgViewport() {
  * Mirror Telegram's safe-area insets into CSS vars so layout can clear the
  * floating Telegram UI (Close button, ⋯ menu, drag handle) on iOS/Android.
  *
- * - `--tg-safe-top`  = device inset (status bar / notch)
- * - `--tg-content-top` = inset INCLUDING Telegram's floating controls
+ * Per Telegram WebApp spec the two insets are RELATIVE — `contentSafeAreaInset`
+ * sits inside `safeAreaInset` — so to get the absolute distance from the
+ * top of the Mini App window we ADD them.
  *
- * On Bot API < 8.0 these are undefined; we fall back to a sane platform
- * default so the title doesn't get covered by the Close button.
+ * - `--tg-safe-top`    = device inset (status bar / notch)
+ * - `--tg-content-top` = absolute inset clearing Telegram's floating controls
+ *
+ * On Bot API < 8.0 the values are undefined; we fall back to a generous
+ * platform default so the title doesn't get covered by the Close button.
  */
 function setTgSafeAreas() {
   const tg = getTg()
   const root = typeof document !== 'undefined' ? document.documentElement : null
   if (!root) return
   const platform = tg?.platform ?? ''
-  // Mobile clients (ios/android) get a generous fallback when the SDK is too
-  // old to report contentSafeAreaInset — desktop/tdesktop don't render those
-  // floating controls, so 0 is fine there.
+  // Mobile clients (ios/android) host the floating controls.
+  // Desktop/tdesktop don't, so 0 is fine there.
   const isMobile = platform === 'ios' || platform === 'android'
-  const fallbackContent = isMobile ? 96 : 0
+  // Pre-Bot-API-8.0 fallback. Status bar (~44px) + Telegram drag-handle area
+  // and Close/⋯ buttons (~80px) ≈ 124px — leave a touch more for safety.
+  const fallbackTotal = isMobile ? 130 : 0
   const fallbackSafe = isMobile ? 44 : 0
-  const safeTop = tg?.safeAreaInset?.top ?? fallbackSafe
-  const contentTop = tg?.contentSafeAreaInset?.top ?? fallbackContent
-  root.style.setProperty('--tg-safe-top', `${safeTop}px`)
-  // Use the LARGER of safe-area-inset and contentSafeAreaInset — whichever
-  // pushes us further down — so the page header always clears both.
-  root.style.setProperty('--tg-content-top', `${Math.max(safeTop, contentTop)}px`)
+
+  const safeTop = tg?.safeAreaInset?.top
+  const contentTop = tg?.contentSafeAreaInset?.top
+
+  let absoluteTop: number
+  if (typeof safeTop === 'number' && typeof contentTop === 'number') {
+    // Both reported — add them since contentSafeAreaInset is relative
+    absoluteTop = safeTop + contentTop
+  } else if (typeof safeTop === 'number') {
+    // Only device inset known — add a buffer for the floating controls
+    absoluteTop = safeTop + (isMobile ? 80 : 0)
+  } else {
+    absoluteTop = fallbackTotal
+  }
+
+  root.style.setProperty('--tg-safe-top', `${safeTop ?? fallbackSafe}px`)
+  root.style.setProperty('--tg-content-top', `${absoluteTop}px`)
 }
 
 /** True when the page is rendered inside the Telegram app (not a regular browser). */
