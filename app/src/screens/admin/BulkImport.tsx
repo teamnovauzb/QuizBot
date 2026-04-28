@@ -84,7 +84,7 @@ export default function BulkImport() {
   return (
     <Shell>
       <PageHeader eyebrow={t('admin.bulkImport')} title={t('admin.bulkImportTitle')} />
-      <div className="px-5 flex-1 overflow-y-auto pb-24">
+      <div className="px-5 pb-28">
         <Card className="p-4 mb-4">
           <div className="text-[10px] uppercase font-mono tracking-[0.18em] text-[var(--ink-soft)] mb-2">{t('admin.bulkPasteHint')}</div>
           <textarea

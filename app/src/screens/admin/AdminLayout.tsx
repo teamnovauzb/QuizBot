@@ -10,9 +10,7 @@ export default function AdminLayout() {
   return (
     <Shell>
       <NetworkBadge />
-      <div className="flex-1 flex flex-col">
-        <Outlet />
-      </div>
+      <Outlet />
       <TabBar tabs={[
         { to: '/admin', label: t('admin.overview'), icon: <ChartIcon /> },
         { to: '/admin/questions', label: t('nav.questions'), icon: <QuestionIcon /> },

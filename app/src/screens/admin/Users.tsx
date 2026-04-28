@@ -49,7 +49,7 @@ export default function AdminUsers() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto pb-24">
+    <div className="pb-28">
       <PageHeader
         eyebrow={myGroup?.name ?? t('common.all')}
         title={t('nav.users')}

@@ -18,7 +18,7 @@ export default function Assignments() {
   }, [])
 
   return (
-    <div className="flex-1 overflow-y-auto pb-24">
+    <div className="pb-28">
       <PageHeader eyebrow={t('app.tagline')} title={t('nav.assignments')} />
       <div className="px-5 mt-3">
         {list === null ? <SkeletonRow count={3} /> : list.length === 0 ? (

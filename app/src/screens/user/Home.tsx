@@ -70,7 +70,7 @@ export default function UserHome() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto pb-20">
+    <div className="pb-28">
       <PageHeader
         eyebrow={`№ ${(tgUser?.id ?? 0).toString().padStart(6, '0').slice(-6)} · ${t('app.tagline')}`}
         title={t('home.greeting') + ', ' + (tgUser?.first_name?.split(' ')[0] ?? '...') + '.'}

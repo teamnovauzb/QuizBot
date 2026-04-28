@@ -26,7 +26,7 @@ export default function History() {
   }, [attempts])
 
   return (
-    <div className="flex-1 overflow-y-auto pb-20">
+    <div className="pb-28">
       <PageHeader eyebrow={t('app.tagline')} title={t('history.title')} />
 
       {grouped.length === 0 ? (

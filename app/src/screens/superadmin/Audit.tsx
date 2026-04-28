@@ -25,7 +25,7 @@ export default function Audit() {
   }, [audit, search, role, users])
 
   return (
-    <div className="flex-1 overflow-y-auto pb-24">
+    <div className="pb-28">
       <PageHeader eyebrow={`${audit.length} entries`} title={t('super.auditLog')} />
       <div className="px-5 mt-2">
         <div className="flex items-center gap-2 px-4 py-3 rounded-2xl border border-[var(--hairline)] bg-[var(--paper-2)]">

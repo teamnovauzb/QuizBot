@@ -1,19 +1,19 @@
-import { useEffect, useState } from 'react'
+// Simplified entry — just logo + 3 demo role tiles. Web/dev users tap a
+// role to enter. Inside Telegram, users get auto-redirected via initData.
+
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useStore, type Role } from '../store'
-import { initTelegram, haptic } from '../lib/telegram'
+import { initTelegram, haptic, isTelegram } from '../lib/telegram'
 import { Shell } from '../components/Shell'
 import { LangSwitcher } from '../components/LangSwitcher'
-import { ShieldIcon, UserIcon, UsersIcon, ArrowIcon, SparkleIcon } from '../components/Icons'
-import { signInWithTelegram } from '../lib/auth'
-import { SUPABASE_ENABLED } from '../lib/supabase'
-import { TelegramCodeLogin, TelegramLoginWidget } from '../components/TelegramLogin'
+import { ShieldIcon, UserIcon, UsersIcon, ArrowIcon } from '../components/Icons'
 
 const DEMO_USERS = [
-  { id: 100001, role: 'superadmin' as Role, name: 'Asadbek K.', tag: '@asadbek', sub: 'Bosh admin' },
-  { id: 200001, role: 'admin' as Role, name: 'Dilnoza Y.', tag: '@dilnoza_y', sub: 'Guruh 101' },
-  { id: 300001, role: 'user' as Role, name: 'Madina I.', tag: '@madinai', sub: 'Talaba' },
+  { id: 100001, role: 'superadmin' as Role, name: 'Asadbek K.', username: 'asadbek' },
+  { id: 200001, role: 'admin' as Role, name: 'Dilnoza Y.', username: 'dilnoza_y' },
+  { id: 300001, role: 'user' as Role, name: 'Madina I.', username: 'madinai' },
 ]
 
 export default function Entry() {
@@ -22,181 +22,109 @@ export default function Entry() {
   const setTgUser = useStore(s => s.setTgUser)
   const tgUser = useStore(s => s.tgUser)
   const users = useStore(s => s.users)
-  const syncing = useStore(s => s.syncing)
-  const syncError = useStore(s => s.syncError)
-  const hydrated = useStore(s => s.hydrated)
 
-  const [authStatus, setAuthStatus] = useState<'idle' | 'signing-in' | 'signed-in' | 'failed'>('idle')
-  const [authError, setAuthError] = useState<string | null>(null)
-
+  // If inside actual Telegram, the WebApp gives us the user — auto-route.
   useEffect(() => {
     const tg = initTelegram()
     if (tg?.initDataUnsafe?.user) {
       setTgUser(tg.initDataUnsafe.user)
-      // If running inside Telegram and Supabase is configured, auth automatically.
-      if (SUPABASE_ENABLED && tg.initData) {
-        setAuthStatus('signing-in')
-        signInWithTelegram().then(r => {
-          if (r.ok) setAuthStatus('signed-in')
-          else { setAuthStatus('failed'); setAuthError(r.reason ?? 'unknown') }
-        })
-      }
     }
   }, [setTgUser])
 
-  async function pick(id: number) {
+  useEffect(() => {
+    if (!tgUser || !isTelegram()) return
+    const u = users.find(x => x.telegramId === tgUser.id)
+    if (u?.role === 'superadmin') navigate('/super', { replace: true })
+    else if (u?.role === 'admin') navigate('/admin', { replace: true })
+    else navigate('/u', { replace: true })
+  }, [tgUser?.id, users, navigate])
+
+  function pick(id: number) {
     haptic('medium')
-    const u = users.find(u => u.telegramId === id)!
+    const u = users.find(u => u.telegramId === id)
+    if (!u) return
     setTgUser({ id: u.telegramId, first_name: u.name.split(' ')[0], last_name: u.name.split(' ').slice(1).join(' '), username: u.username })
-
-    // dev-mode auth (only works if edge function has ALLOW_DEV_LOGIN=true)
-    if (SUPABASE_ENABLED) {
-      setAuthStatus('signing-in')
-      const r = await signInWithTelegram(u.telegramId, u.name)
-      if (r.ok) setAuthStatus('signed-in')
-      else { setAuthStatus('failed'); setAuthError(r.reason ?? 'unknown') }
-    }
-
     if (u.role === 'superadmin') navigate('/super')
     else if (u.role === 'admin') navigate('/admin')
     else navigate('/u')
   }
 
-  function continueAsTg() {
-    if (!tgUser) return
-    const u = users.find(u => u.telegramId === tgUser.id)
-    haptic('medium')
-    if (u?.role === 'superadmin') navigate('/super')
-    else if (u?.role === 'admin') navigate('/admin')
-    else navigate('/u')
-  }
-
   return (
-    <Shell className="px-0">
-      {/* HERO */}
-      <div className="relative px-5 pt-[max(env(safe-area-inset-top),16px)] pb-6 paper-rise">
-        <div className="flex items-center justify-between mb-12">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-[var(--ink-soft)] opacity-70">№ 001</span>
-          </div>
+    <Shell>
+      <div className="px-6 pt-[max(env(safe-area-inset-top),28px)] pb-12">
+        {/* Top bar */}
+        <div className="flex items-center justify-end mb-10">
           <LangSwitcher />
         </div>
 
-        <div className="flex items-baseline gap-3 mb-2">
-          <span className="font-mono text-[11px] tracking-[0.3em] uppercase text-[var(--accent)]">— {t('app.tagline')}</span>
-        </div>
-        <h1 className="font-display text-[clamp(56px,15vw,84px)] leading-[0.86] tracking-[-0.02em] text-[var(--ink)]">
-          Shifokorat
-          <span className="block italic text-[var(--accent)]">savol-javob</span>
-        </h1>
-        <p className="mt-5 max-w-[28ch] text-[15px] leading-relaxed text-[var(--ink-soft)]">
-          {t('home.motto')}. {t('home.welcome')} —{' '}
-          <span className="font-display italic">102 savol</span>, 9 bo‘lim, 3 til.
-        </p>
-
-        {/* Backend status badge */}
-        <div className="mt-4 inline-flex items-center gap-2">
-          <span className={
-            'w-1.5 h-1.5 rounded-full ' + (
-              !SUPABASE_ENABLED ? 'bg-[var(--ink-soft)] opacity-40' :
-              authStatus === 'signed-in' && hydrated ? 'bg-[#4ADE80]' :
-              authStatus === 'failed' ? 'bg-[#F87171]' :
-              'bg-[var(--accent)] animate-pulse'
-            )
-          } />
-          <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--ink-soft)] opacity-70">
-            {!SUPABASE_ENABLED && 'offline · localStorage'}
-            {SUPABASE_ENABLED && authStatus === 'idle' && 'supabase · ready'}
-            {SUPABASE_ENABLED && authStatus === 'signing-in' && 'supabase · signing in...'}
-            {SUPABASE_ENABLED && authStatus === 'signed-in' && (syncing ? 'supabase · syncing...' : hydrated ? 'supabase · live' : 'supabase · authed')}
-            {SUPABASE_ENABLED && authStatus === 'failed' && `supabase · ${authError}`}
-            {SUPABASE_ENABLED && syncError && ` · ${syncError.slice(0, 24)}`}
-          </span>
-        </div>
-      </div>
-
-      {/* HAIRLINE WITH ROMAN NUMERAL */}
-      <div className="flex items-center gap-4 px-5">
-        <span className="font-display text-[12px] tracking-[0.3em] text-[var(--ink-soft)]">I.</span>
-        <div className="flex-1 h-px bg-[var(--hairline)]" />
-        <span className="font-mono text-[10px] tracking-[0.22em] uppercase text-[var(--ink-soft)] opacity-70">{t('role.select')}</span>
-      </div>
-
-      {/* TG USER (if connected) */}
-      {tgUser && (
-        <div className="px-5 mt-5">
-          <button
-            onClick={continueAsTg}
-            className="w-full text-left rounded-2xl bg-[var(--ink)] text-[var(--paper)] p-5 flex items-center gap-4 active:scale-[0.99] transition-transform"
-          >
-            <div className="w-12 h-12 rounded-full bg-[var(--accent)] grid place-items-center font-display text-2xl">
-              {tgUser.first_name?.[0] ?? 'U'}
+        {/* Hero */}
+        <div className="text-center max-w-sm mx-auto mb-12 fade-up">
+          <div className="relative mx-auto mb-6 w-20 h-20">
+            <div className="absolute inset-0 rounded-3xl bg-[var(--accent)] opacity-25 blur-2xl" />
+            <div className="relative w-full h-full rounded-3xl glass-strong grid place-items-center">
+              <span className="font-display font-bold text-4xl italic text-[var(--accent)]">Sh</span>
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[11px] uppercase tracking-[0.18em] font-mono opacity-60">Telegram</div>
-              <div className="font-display text-2xl truncate">{tgUser.first_name} {tgUser.last_name ?? ''}</div>
-              {tgUser.username && <div className="text-xs opacity-70 font-mono">@{tgUser.username}</div>}
-            </div>
-            <span className="w-9 h-9 rounded-full bg-[var(--accent)] grid place-items-center">
-              <ArrowIcon className="w-4 h-4 stroke-[var(--ink)]" />
-            </span>
-          </button>
-        </div>
-      )}
-
-      {/* WEB LOGIN — for outside Telegram */}
-      {SUPABASE_ENABLED && !tgUser && (
-        <div className="px-5 mt-5 space-y-3 paper-rise">
-          <div className="flex items-center gap-3 mb-1">
-            <span className="font-mono text-[10px] tracking-[0.22em] uppercase text-[var(--ink-soft)] opacity-70">{t('login.title')}</span>
-            <SparkleIcon className="w-3 h-3 stroke-[var(--accent)]" />
           </div>
-          <TelegramLoginWidget />
-          <TelegramCodeLogin />
-        </div>
-      )}
-
-      {/* DEMO ROLES — for development without Telegram */}
-      <div className="px-5 mt-6 flex-1 ink-bleed">
-        <div className="flex items-center gap-3 mb-4">
-          <span className="font-mono text-[10px] tracking-[0.22em] uppercase text-[var(--ink-soft)] opacity-70">Demo · select preview</span>
-          <SparkleIcon className="w-3 h-3 stroke-[var(--accent)]" />
+          <h1 className="font-display font-bold text-[34px] leading-tight tracking-tight">Shifokorat</h1>
+          <p className="text-[var(--text-muted)] text-sm mt-2">{t('app.tagline')}</p>
         </div>
 
-        <ul className="flex flex-col gap-2">
+        {/* Tg user shortcut */}
+        {tgUser && (
+          <div className="max-w-sm mx-auto mb-4 fade-up" style={{ animationDelay: '0.05s' }}>
+            <button
+              onClick={() => {
+                const u = users.find(x => x.telegramId === tgUser.id)
+                if (u?.role === 'superadmin') navigate('/super')
+                else if (u?.role === 'admin') navigate('/admin')
+                else navigate('/u')
+              }}
+              className="w-full rounded-2xl bg-[var(--accent)] text-[var(--bg)] p-4 flex items-center gap-3 active:scale-[0.99] shadow-[0_8px_24px_-8px_var(--accent-glow)]"
+            >
+              <div className="w-10 h-10 rounded-full bg-[var(--bg)]/20 grid place-items-center font-display text-xl font-bold">
+                {tgUser.first_name?.[0] ?? 'U'}
+              </div>
+              <div className="flex-1 min-w-0 text-left">
+                <div className="font-display font-bold text-base truncate">{tgUser.first_name} {tgUser.last_name ?? ''}</div>
+                {tgUser.username && <div className="text-xs opacity-70">@{tgUser.username}</div>}
+              </div>
+              <ArrowIcon className="w-5 h-5" />
+            </button>
+          </div>
+        )}
+
+        {/* Demo role tiles */}
+        <div className="max-w-sm mx-auto space-y-2.5">
+          <div className="text-[10px] uppercase tracking-[0.22em] font-mono text-[var(--text-muted)] mb-2 text-center">
+            {t('role.select')}
+          </div>
           {DEMO_USERS.map((d, i) => {
             const Icon = d.role === 'superadmin' ? ShieldIcon : d.role === 'admin' ? UsersIcon : UserIcon
             return (
-              <li key={d.id}>
-                <button
-                  onClick={() => pick(d.id)}
-                  className="w-full group relative overflow-hidden rounded-2xl border border-[var(--hairline)] bg-[var(--paper-2)] p-4 flex items-center gap-4 text-left active:scale-[0.99] transition-transform paper-rise"
-                  style={{ animationDelay: `${0.05 * i + 0.1}s` }}
-                >
-                  <div className="font-display text-[44px] leading-none w-10 text-center text-[var(--ink-soft)] opacity-30 numerals">
-                    {(i + 1).toString().padStart(2, '0')}
-                  </div>
-                  <div className="w-10 h-10 rounded-xl border border-[var(--hairline)] grid place-items-center text-[var(--ink-soft)]">
-                    <Icon className="w-5 h-5 stroke-current" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[11px] uppercase tracking-[0.18em] font-mono text-[var(--accent)]">{t(`role.${d.role}`)}</div>
-                    <div className="font-display text-xl truncate">{d.name}</div>
-                    <div className="text-xs text-[var(--ink-soft)] opacity-70 font-mono">{d.tag} · {d.sub}</div>
-                  </div>
-                  <ArrowIcon className="w-5 h-5 stroke-[var(--ink-soft)] group-hover:stroke-[var(--accent)] transition-colors" />
-                </button>
-              </li>
+              <button
+                key={d.id}
+                onClick={() => pick(d.id)}
+                className="w-full rounded-2xl glass border border-[var(--hairline-strong)] p-4 flex items-center gap-3 active:scale-[0.99] transition-transform fade-up"
+                style={{ animationDelay: `${0.1 + i * 0.05}s` }}
+              >
+                <div className="w-11 h-11 rounded-xl bg-[var(--accent-soft)] grid place-items-center text-[var(--accent)] shrink-0">
+                  <Icon className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <div className="font-display font-bold text-base">{t(`role.${d.role}`)}</div>
+                  <div className="text-xs text-[var(--text-muted)] font-mono truncate">{d.name} · @{d.username}</div>
+                </div>
+                <ArrowIcon className="w-5 h-5 stroke-[var(--text-muted)]" />
+              </button>
             )
           })}
-        </ul>
-      </div>
+        </div>
 
-      {/* FOOTER */}
-      <footer className="px-5 pt-6 pb-[max(env(safe-area-inset-bottom),20px)] flex items-center justify-between text-[10px] uppercase font-mono tracking-[0.22em] text-[var(--ink-soft)] opacity-60">
-        <span>EST. 2026</span>
-        <span>v0.2 · BETA</span>
-      </footer>
+        {/* Footer */}
+        <div className="mt-12 text-center text-[10px] uppercase font-mono tracking-[0.3em] text-[var(--text-dim)]">
+          v0.3 · 2026
+        </div>
+      </div>
     </Shell>
   )
 }

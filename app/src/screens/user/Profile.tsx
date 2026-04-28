@@ -75,7 +75,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto pb-24">
+    <div className="pb-28">
       {/* HERO with radial mint glow */}
       <div className="relative px-5 pt-[max(env(safe-area-inset-top),24px)] pb-32">
         <div className="absolute inset-x-0 top-0 h-[280px] -z-10">

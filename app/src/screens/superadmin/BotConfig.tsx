@@ -37,7 +37,7 @@ export default function BotConfig() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto pb-24">
+    <div className="pb-28">
       <PageHeader eyebrow={t('super.title')} title={t('nav.botConfig')} />
       <div className="px-5 mt-2 space-y-3">
         {KEYS.map(k => {

@@ -1,9 +1,14 @@
 import { type ReactNode } from 'react'
 import clsx from 'clsx'
 
+/**
+ * Shell — atmospheric wrapper. Body scrolls naturally (was inner-scroll
+ * before, which broke on mobile Telegram). All pages add `pb-24` themselves
+ * to clear the fixed TabBar.
+ */
 export function Shell({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={clsx('relative flex flex-col min-h-[100dvh] aurora grain', className)}>
+    <div className={clsx('relative aurora grain min-h-[100svh]', className)}>
       {children}
     </div>
   )
@@ -12,11 +17,11 @@ export function Shell({ children, className }: { children: ReactNode; className?
 export function PageHeader({ eyebrow, title, right }: { eyebrow?: string; title: string; right?: ReactNode }) {
   return (
     <header className="px-5 pt-4 pb-3 flex items-end justify-between gap-3 fade-up">
-      <div>
+      <div className="min-w-0 flex-1">
         {eyebrow && (
-          <div className="text-[10px] tracking-[0.18em] uppercase font-mono text-[var(--text-muted)] mb-1.5">{eyebrow}</div>
+          <div className="text-[10px] tracking-[0.18em] uppercase font-mono text-[var(--text-muted)] mb-1.5 truncate">{eyebrow}</div>
         )}
-        <h1 className="font-display text-[32px] font-bold leading-[1.05] tracking-tight">{title}</h1>
+        <h1 className="font-display text-[26px] font-bold leading-[1.05] tracking-tight truncate">{title}</h1>
       </div>
       {right && <div className="shrink-0">{right}</div>}
     </header>

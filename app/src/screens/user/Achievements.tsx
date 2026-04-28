@@ -41,7 +41,7 @@ export default function Achievements() {
   const lang = i18n.language as 'uz' | 'ru' | 'en'
 
   return (
-    <div className="flex-1 overflow-y-auto pb-24">
+    <div className="pb-28">
       <PageHeader eyebrow={`${all.size}/${defs.length} ${t('common.unlocked')}`} title={t('nav.achievements')} />
 
       <div className="px-5 mt-3 grid grid-cols-2 gap-3">

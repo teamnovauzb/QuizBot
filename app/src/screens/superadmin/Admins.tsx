@@ -20,7 +20,7 @@ export default function Admins() {
   const [addOpen, setAddOpen] = useState(false)
 
   return (
-    <div className="flex-1 overflow-y-auto pb-24">
+    <div className="pb-28">
       <PageHeader
         eyebrow={`${admins.length} ${t('nav.admins').toLowerCase()}`}
         title={t('nav.admins')}

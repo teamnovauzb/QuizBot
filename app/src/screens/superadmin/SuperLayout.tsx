@@ -10,9 +10,7 @@ export default function SuperLayout() {
   return (
     <Shell>
       <NetworkBadge />
-      <div className="flex-1 flex flex-col">
-        <Outlet />
-      </div>
+      <Outlet />
       <TabBar tabs={[
         { to: '/super', label: t('admin.overview'), icon: <ChartIcon /> },
         { to: '/super/analytics', label: t('nav.analytics'), icon: <ChartIcon /> },

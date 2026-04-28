@@ -51,7 +51,7 @@ export default function Broadcast() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto pb-24">
+    <div className="pb-28">
       <PageHeader eyebrow={t('super.title').toUpperCase()} title={t('super.broadcast')} />
 
       <div className="px-5 mt-2 space-y-4">

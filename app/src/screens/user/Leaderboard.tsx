@@ -54,7 +54,7 @@ export default function Leaderboard() {
   }, [scope, me?.groupId])
 
   return (
-    <div className="flex-1 overflow-y-auto pb-24">
+    <div className="pb-28">
       <PageHeader eyebrow={t('app.tagline')} title={t('nav.leaderboard')} />
 
       <div className="px-5 mt-2 inline-flex">

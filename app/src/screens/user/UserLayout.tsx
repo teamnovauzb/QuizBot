@@ -10,9 +10,7 @@ export default function UserLayout() {
   return (
     <Shell>
       <NetworkBadge />
-      <div className="flex-1 flex flex-col">
-        <Outlet />
-      </div>
+      <Outlet />
       <TabBar tabs={[
         { to: '/u', label: t('nav.home'), icon: <HomeIcon /> },
         { to: '/u/leaderboard', label: t('nav.leaderboard'), icon: <ChartIcon /> },

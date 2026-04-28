@@ -6,9 +6,10 @@ export type Theme = 'auto' | 'light' | 'dark'
 const KEY = 'shifokorat-theme'
 
 export function getStoredTheme(): Theme {
-  if (typeof localStorage === 'undefined') return 'auto'
+  // Default → light (per user preference). User can switch to dark/auto in settings.
+  if (typeof localStorage === 'undefined') return 'light'
   const v = localStorage.getItem(KEY)
-  return v === 'light' || v === 'dark' || v === 'auto' ? v : 'auto'
+  return v === 'light' || v === 'dark' || v === 'auto' ? v : 'light'
 }
 
 export function applyTheme(t: Theme) {
@@ -16,9 +17,10 @@ export function applyTheme(t: Theme) {
   const root = document.documentElement
   let resolved: 'light' | 'dark'
   if (t === 'auto') {
+    // Auto = light by default, switches to dark only if Telegram or OS explicitly dark
     const tgScheme = (window as any).Telegram?.WebApp?.colorScheme as 'light' | 'dark' | undefined
     const sysDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches
-    resolved = (tgScheme ?? (sysDark ? 'dark' : 'light')) === 'dark' ? 'dark' : 'light'
+    resolved = tgScheme === 'dark' || (tgScheme === undefined && sysDark) ? 'dark' : 'light'
   } else {
     resolved = t
   }

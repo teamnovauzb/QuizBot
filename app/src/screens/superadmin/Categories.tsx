@@ -26,7 +26,7 @@ export default function Categories() {
   useEffect(() => { reload() }, [])
 
   return (
-    <div className="flex-1 overflow-y-auto pb-24">
+    <div className="pb-28">
       <PageHeader
         eyebrow={`${list.length} bo'lim`}
         title={t('nav.categories')}
