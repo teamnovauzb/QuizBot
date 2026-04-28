@@ -89,6 +89,9 @@ export default {
     confirm: 'Подтвердить',
     skip: 'Пока пропустить',
     back: 'Назад',
+    manualHint: 'Введите имя и номер',
+    namePlaceholder: 'Имя Фамилия',
+    nameRequired: 'Укажите имя',
   },
   onboarding: {
     skip: 'Пропустить',
@@ -116,6 +119,7 @@ export default {
     unverified: 'Не подтверждено',
     share: 'Поделиться',
     signOut: 'Выход',
+    signOutConfirm: 'Выйти из аккаунта?',
   } as any,
   quiz: {
     question: 'Вопрос',

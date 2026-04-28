@@ -89,6 +89,9 @@ export default {
     confirm: 'Confirm',
     skip: 'Skip for now',
     back: 'Back',
+    manualHint: 'Enter your name and phone',
+    namePlaceholder: 'First Last',
+    nameRequired: 'Please enter your name',
   },
   onboarding: {
     skip: 'Skip',
@@ -116,6 +119,7 @@ export default {
     unverified: 'Unverified',
     share: 'Share',
     signOut: 'Sign out',
+    signOutConfirm: 'Sign out of your account?',
   } as any,
   quiz: {
     question: 'Question',

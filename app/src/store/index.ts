@@ -50,6 +50,8 @@ type State = {
 
   setPhone: (telegramId: number, phone: string) => void
 
+  signOut: () => void
+
   hydrateFromSupabase: () => Promise<void>
 }
 
@@ -210,6 +212,24 @@ export const useStore = create<State>()(persist((set, get) => ({
     set(s => ({
       users: s.users.map(u => u.telegramId === telegramId ? { ...u, phone, phoneVerified: true } : u),
     }))
+  },
+  signOut: () => {
+    // Clear all per-user state — tgUser, phone caches, achievements, bookmarks
+    const tid = get().tgUser?.id
+    if (tid && typeof localStorage !== 'undefined') {
+      try { localStorage.removeItem(`tg_contact_${tid}`) } catch {}
+    }
+    set({
+      tgUser: null,
+      currentRole: 'user',
+      bookmarks: [],
+      unlockedAchievements: [],
+    })
+    // Clear Supabase auth session if present (best-effort, async)
+    try {
+      // dynamic import to avoid circular deps
+      import('../lib/supabase').then(m => { m.supabase?.auth.signOut() }).catch(() => {})
+    } catch {}
   },
   unlockAchievement: (slug) => {
     if (get().unlockedAchievements.includes(slug)) return

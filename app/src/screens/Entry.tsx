@@ -26,9 +26,11 @@ export default function Entry() {
   const tgUser = useStore(s => s.tgUser)
   const users = useStore(s => s.users)
 
+  const upsertUser = useStore(s => s.upsertUser)
   const [busy, setBusy] = useState(false)
   const [showManual, setShowManual] = useState(false)
   const [phoneVal, setPhoneVal] = useState('+998 ')
+  const [nameVal, setNameVal] = useState('')
 
   // 1. Connect Telegram on mount
   useEffect(() => {
@@ -70,23 +72,43 @@ export default function Entry() {
 
   function shareManual() {
     const r = manualPhoneAccept(phoneVal)
-    if (r.ok && r.via === 'manual') {
-      // Manual flow needs a tg id — fall through to demo regular user
-      const tid = tgUser?.id ?? 300001
-      setTgUser({
-        id: tid,
-        first_name: tgUser?.first_name ?? 'Demo',
-        last_name: tgUser?.last_name,
-        username: tgUser?.username ?? 'demo',
-      })
-      markCached(tid, r.phone)
-      setPhone(tid, r.phone)
-      saveContactToDb(tid, r.phone)
-      toast.success(t('phone.thanks'))
-      navigate('/u', { replace: true })
-    } else {
+    if (!r.ok || r.via !== 'manual') {
       toast.error(t('phone.invalid'))
+      return
     }
+    const trimmed = nameVal.trim()
+    if (trimmed.length < 2) {
+      toast.error(t('phone.nameRequired'))
+      return
+    }
+    // Fresh manual user: random tg_id in 9xxxxxxx range, no clash with seed/demo users
+    const tid = tgUser?.id ?? Math.floor(900_000_000 + Math.random() * 99_000_000)
+    const parts = trimmed.split(/\s+/)
+    const first = parts[0]
+    const last = parts.slice(1).join(' ') || undefined
+    const username = first.toLowerCase().replace(/[^a-z0-9_]/g, '') || `u${tid}`
+
+    setTgUser({
+      id: tid,
+      first_name: first,
+      last_name: last,
+      username,
+    })
+    upsertUser({
+      telegramId: tid,
+      name: trimmed,
+      username,
+      role: 'user',
+      joinedAt: Date.now(),
+      lastActive: Date.now(),
+      phone: r.phone,
+      phoneVerified: true,
+    })
+    markCached(tid, r.phone)
+    setPhone(tid, r.phone)
+    saveContactToDb(tid, r.phone)
+    toast.success(t('phone.thanks'))
+    navigate('/u', { replace: true })
   }
 
 
@@ -145,14 +167,21 @@ export default function Entry() {
           ) : (
             <div className="space-y-3">
               <div className="text-[10px] uppercase tracking-[0.22em] font-mono text-[var(--text-muted)] text-center">
-                {t('phone.enterManual')}
+                {t('phone.manualHint')}
               </div>
+              <input
+                value={nameVal}
+                onChange={e => setNameVal(e.target.value)}
+                placeholder={t('phone.namePlaceholder')}
+                className="w-full px-4 py-3.5 rounded-2xl glass border border-[var(--hairline-strong)] text-base"
+                autoFocus
+              />
               <input
                 value={phoneVal}
                 onChange={e => setPhoneVal(e.target.value)}
                 inputMode="tel"
                 placeholder="+998 95 123 45 67"
-                className="w-full px-4 py-4 rounded-2xl glass border border-[var(--hairline-strong)] text-center font-mono text-base"
+                className="w-full px-4 py-3.5 rounded-2xl glass border border-[var(--hairline-strong)] text-center font-mono text-base"
               />
               <div className="text-xs text-[var(--text-dim)] font-mono text-center">→ {fmtPhone(phoneVal)}</div>
               <button

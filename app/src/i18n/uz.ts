@@ -89,6 +89,9 @@ export default {
     confirm: 'Tasdiqlash',
     skip: 'Hozircha oʻtkazib yuborish',
     back: 'Orqaga',
+    manualHint: 'Ism va raqamingizni kiriting',
+    namePlaceholder: 'Ism Familiya',
+    nameRequired: 'Ismingizni kiriting',
   },
   onboarding: {
     skip: 'Oʻtkazib yuborish',
@@ -116,6 +119,7 @@ export default {
     unverified: 'Tasdiqlanmagan',
     share: 'Ulashish',
     signOut: 'Chiqish',
+    signOutConfirm: 'Chiqishni tasdiqlaysizmi?',
   } as any,
   quiz: {
     question: 'Savol',
