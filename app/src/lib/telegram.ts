@@ -1,3 +1,5 @@
+type TgInset = { top: number; bottom: number; left: number; right: number }
+
 type TgWebApp = {
   ready: () => void
   expand: () => void
@@ -11,6 +13,10 @@ type TgWebApp = {
   viewportHeight?: number
   viewportStableHeight?: number
   isExpanded?: boolean
+  // Bot API 8.0+: device safe-area (notch / status bar)
+  safeAreaInset?: TgInset
+  // Bot API 8.0+: includes Telegram-injected UI (Close button, drag handle, ⋯ menu)
+  contentSafeAreaInset?: TgInset
   HapticFeedback?: { impactOccurred: (s: 'light' | 'medium' | 'heavy') => void; notificationOccurred: (t: 'success' | 'error' | 'warning') => void; selectionChanged: () => void }
   BackButton?: { show: () => void; hide: () => void; onClick: (cb: () => void) => void; offClick: (cb: () => void) => void }
   MainButton?: { show: () => void; hide: () => void; setText: (t: string) => void; onClick: (cb: () => void) => void; offClick: (cb: () => void) => void; enable: () => void; disable: () => void }
@@ -54,7 +60,11 @@ export function initTelegram() {
     // Track viewport height — Telegram mobile sometimes has the wrong svh,
     // so we mirror its `viewportStableHeight` into a CSS var. See main.tsx.
     setTgViewport()
+    setTgSafeAreas()
     tg.onEvent?.('viewportChanged', setTgViewport)
+    // Bot API 8.0+ — fires when safe-area changes (rotation, controls show/hide)
+    tg.onEvent?.('safeAreaChanged', setTgSafeAreas)
+    tg.onEvent?.('contentSafeAreaChanged', setTgSafeAreas)
   } catch { /* noop */ }
   return tg
 }
@@ -65,6 +75,35 @@ function setTgViewport() {
   if (!root) return
   const h = tg?.viewportStableHeight ?? tg?.viewportHeight ?? window.innerHeight
   if (h && h > 100) root.style.setProperty('--tg-vh', `${h}px`)
+}
+
+/**
+ * Mirror Telegram's safe-area insets into CSS vars so layout can clear the
+ * floating Telegram UI (Close button, ⋯ menu, drag handle) on iOS/Android.
+ *
+ * - `--tg-safe-top`  = device inset (status bar / notch)
+ * - `--tg-content-top` = inset INCLUDING Telegram's floating controls
+ *
+ * On Bot API < 8.0 these are undefined; we fall back to a sane platform
+ * default so the title doesn't get covered by the Close button.
+ */
+function setTgSafeAreas() {
+  const tg = getTg()
+  const root = typeof document !== 'undefined' ? document.documentElement : null
+  if (!root) return
+  const platform = tg?.platform ?? ''
+  // Mobile clients (ios/android) get a generous fallback when the SDK is too
+  // old to report contentSafeAreaInset — desktop/tdesktop don't render those
+  // floating controls, so 0 is fine there.
+  const isMobile = platform === 'ios' || platform === 'android'
+  const fallbackContent = isMobile ? 96 : 0
+  const fallbackSafe = isMobile ? 44 : 0
+  const safeTop = tg?.safeAreaInset?.top ?? fallbackSafe
+  const contentTop = tg?.contentSafeAreaInset?.top ?? fallbackContent
+  root.style.setProperty('--tg-safe-top', `${safeTop}px`)
+  // Use the LARGER of safe-area-inset and contentSafeAreaInset — whichever
+  // pushes us further down — so the page header always clears both.
+  root.style.setProperty('--tg-content-top', `${Math.max(safeTop, contentTop)}px`)
 }
 
 /** True when the page is rendered inside the Telegram app (not a regular browser). */

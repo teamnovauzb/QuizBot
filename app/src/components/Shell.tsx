@@ -23,7 +23,14 @@ export function PageHeader({ eyebrow, title, right }: { eyebrow?: string; title:
   return (
     <header
       className="px-5 pb-3 flex items-end justify-between gap-3 fade-up"
-      style={{ paddingTop: 'calc(max(env(safe-area-inset-top, 0px), 24px) + 40px)' }}
+      style={{
+        // `--tg-content-top` is set by initTelegram() to the larger of
+        // device safe-area-inset and Telegram's contentSafeAreaInset.top.
+        // On non-Telegram browsers it's unset → falls back to env() inset.
+        // Plus 24px breathing room below whatever inset wins.
+        paddingTop:
+          'calc(max(var(--tg-content-top, env(safe-area-inset-top, 0px)), 12px) + 24px)',
+      }}
     >
       <div className="min-w-0 flex-1">
         {eyebrow && (
