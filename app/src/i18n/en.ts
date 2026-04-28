@@ -15,6 +15,7 @@ export default {
     settings: 'Settings',
     bookmarks: 'Bookmarks',
     leaderboard: 'Leaderboard',
+    test: 'Test',
     achievements: 'Achievements',
     assignments: 'Assignments',
     categories: 'Categories',
@@ -62,6 +63,13 @@ export default {
   leaderboard: {
     global: 'Global',
     group: 'Group',
+  },
+  test: {
+    title: 'Test setup',
+    count: 'Number of questions',
+    timePerQ: 'Time per question',
+    category: 'Category',
+    summary: 'Your selection',
   },
   assignments: {
     empty: 'No active assignments',

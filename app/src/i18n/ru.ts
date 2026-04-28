@@ -15,6 +15,7 @@ export default {
     settings: 'Настройки',
     bookmarks: 'Закладки',
     leaderboard: 'Рейтинг',
+    test: 'Тест',
     achievements: 'Достижения',
     assignments: 'Задания',
     categories: 'Разделы',
@@ -62,6 +63,13 @@ export default {
   leaderboard: {
     global: 'Общий',
     group: 'Группа',
+  },
+  test: {
+    title: 'Настройки теста',
+    count: 'Количество вопросов',
+    timePerQ: 'Время на вопрос',
+    category: 'Раздел',
+    summary: 'Ваш выбор',
   },
   assignments: {
     empty: 'Нет активных заданий',

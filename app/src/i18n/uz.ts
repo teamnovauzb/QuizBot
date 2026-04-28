@@ -15,6 +15,7 @@ export default {
     settings: 'Sozlamalar',
     bookmarks: 'Saqlanganlar',
     leaderboard: 'Reyting',
+    test: 'Sinov',
     achievements: 'Yutuqlar',
     assignments: 'Topshiriqlar',
     categories: 'Boʻlimlar',
@@ -62,6 +63,13 @@ export default {
   leaderboard: {
     global: 'Global',
     group: 'Guruh',
+  },
+  test: {
+    title: 'Sinov sozlamalari',
+    count: 'Savollar soni',
+    timePerQ: 'Har savolga vaqt',
+    category: 'Boʻlim',
+    summary: 'Tanlovingiz',
   },
   assignments: {
     empty: 'Faol topshiriq yoʻq',

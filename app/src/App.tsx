@@ -8,6 +8,7 @@ import PhoneGate from './screens/PhoneGate'
 import UserLayout from './screens/user/UserLayout'
 import UserHome from './screens/user/Home'
 import Quiz from './screens/user/Quiz'
+import Test from './screens/user/Test'
 import Result from './screens/user/Result'
 import History from './screens/user/History'
 import UserProfile from './screens/user/Profile'
@@ -146,6 +147,7 @@ export default function App() {
 
         <Route path="/u" element={<PhoneGateGuard><UserLayout /></PhoneGateGuard>}>
           <Route index element={<UserHome />} />
+          <Route path="test" element={<Test />} />
           <Route path="history" element={<History />} />
           <Route path="profile" element={<UserProfile />} />
           <Route path="bookmarks" element={<Bookmarks />} />
