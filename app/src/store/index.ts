@@ -216,9 +216,16 @@ export const useStore = create<State>()(persist((set, get) => ({
       let r = await api.insertAttempt(a)
       if (!r.ok) {
         const msg = (r.error || '').toLowerCase()
+        // Duplicate-key (23505) means the row landed on a previous attempt
+        // but the client thought it failed (e.g. timeout / dropped response).
+        // Treat as success — the data is in the DB.
+        if (msg.includes('duplicate key') || msg.includes('23505')) return
+
         const looksAuthy =
           msg.includes('jwt') || msg.includes('row-level') || msg.includes('row level') ||
-          msg.includes('401') || msg.includes('not authenticated') || msg.includes('permission')
+          msg.includes('401') || msg.includes('not authenticated') ||
+          msg.includes('permission denied') || msg.includes('42501')
+
         if (looksAuthy) {
           try {
             const auth = await import('../lib/auth')
@@ -226,6 +233,11 @@ export const useStore = create<State>()(persist((set, get) => ({
             if (re.ok) r = await api.insertAttempt(a)
           } catch (e) {
             console.warn('[saveAttempt] reauth threw', e)
+          }
+          // If retry hit duplicate-key, the original insert had committed.
+          if (!r.ok) {
+            const m2 = (r.error || '').toLowerCase()
+            if (m2.includes('duplicate key') || m2.includes('23505')) return
           }
         }
       }
