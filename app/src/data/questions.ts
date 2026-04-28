@@ -1,5 +1,7 @@
 import seed from './seed.json'
 
+export type Difficulty = 'easy' | 'medium' | 'hard'
+
 export type Question = {
   id: string
   number: number
@@ -8,6 +10,8 @@ export type Question = {
   options: string[]
   correctIndex: number
   explanation?: string
+  difficulty?: Difficulty
+  imageUrl?: string
 }
 
 type SeedItem = { id: number; q: string; a: string }

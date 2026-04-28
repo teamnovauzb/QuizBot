@@ -43,6 +43,9 @@ export default function Bookmarks() {
                 </span>
                 <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--accent)]">{q.category}</span>
               </div>
+              {q.imageUrl && (
+                <img src={q.imageUrl} alt="" className="w-full h-28 object-cover rounded-lg mb-2" loading="lazy" />
+              )}
               <div className="font-display text-base leading-snug">{q.question}</div>
             </Card>
           ))}

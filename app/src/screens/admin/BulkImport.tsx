@@ -1,14 +1,18 @@
 // Paste-and-parse bulk question import. Accepts the same "→"-delimited format
 // from the source docx, also accepts plain "Q: ... \n A: ..." or CSV-ish.
+// Each parsed row gets a category dropdown so the admin can override the
+// auto-guessed category before committing.
 
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import toast from 'react-hot-toast'
 import { useStore } from '../../store'
 import { Shell, PageHeader, Card } from '../../components/Shell'
-import { CheckIcon, XIcon, BookIcon } from '../../components/Icons'
+import { CheckIcon, XIcon, BookIcon, TrashIcon } from '../../components/Icons'
+import { CATEGORIES } from '../../data/questions'
 
-type Parsed = { question: string; answer: string; category: string; raw: string }
+type Parsed = { question: string; answer: string; category: string }
 
 function parse(raw: string): Parsed[] {
   const lines = raw.split('\n').map(l => l.trim()).filter(Boolean)
@@ -16,21 +20,19 @@ function parse(raw: string): Parsed[] {
   for (let i = 0; i < lines.length - 1; i++) {
     const a = lines[i]
     const b = lines[i + 1]
-    // pattern 1:  "1. <Q>" then "→ <A>"
     const m = /^(?:\d+\.\s*)?(.+?[?!.])\s*$/.exec(a)
     const m2 = /^(?:→|->|—|-|A:|J:|Javob:|Ответ:)\s*(.+)$/.exec(b)
     if (m && m2) {
       const q = m[1].trim()
       const ans = m2[1].trim()
-      out.push({ question: q, answer: ans, category: guessCategory(q + ' ' + ans), raw: a + '\n' + b })
+      out.push({ question: q, answer: ans, category: guessCategory(q + ' ' + ans) })
       i++
       continue
     }
-    // pattern 2:  "Q: ..." then "A: ..."
     const m3 = /^Q:\s*(.+)$/i.exec(a)
     const m4 = /^A:\s*(.+)$/i.exec(b)
     if (m3 && m4) {
-      out.push({ question: m3[1], answer: m4[1], category: guessCategory(m3[1] + ' ' + m4[1]), raw: a + '\n' + b })
+      out.push({ question: m3[1], answer: m4[1], category: guessCategory(m3[1] + ' ' + m4[1]) })
       i++
     }
   }
@@ -65,11 +67,18 @@ export default function BulkImport() {
     setParsed(parse(raw))
   }
 
+  function setRowCategory(i: number, cat: string) {
+    setParsed(prev => prev ? prev.map((p, j) => j === i ? { ...p, category: cat } : p) : prev)
+  }
+
+  function removeRow(i: number) {
+    setParsed(prev => prev ? prev.filter((_, j) => j !== i) : prev)
+  }
+
   function commit() {
-    if (!parsed) return
+    if (!parsed || parsed.length === 0) return
     let count = 0
     for (const p of parsed) {
-      // build options: correct + 3 distractors picked from existing answers (different category preferred)
       const others = allAnswers.filter(a => a !== p.answer)
       const distractors = shuffle(others, count + 1).slice(0, 3)
       const opts = shuffle([p.answer, ...distractors], count + 13)
@@ -79,6 +88,7 @@ export default function BulkImport() {
     }
     setImported(count)
     setParsed(null); setRaw('')
+    toast.success(t('admin.imported', { count }))
   }
 
   return (
@@ -118,12 +128,23 @@ export default function BulkImport() {
               <Card className="p-6 text-center text-sm font-display italic">{t('admin.parseFailed')}</Card>
             ) : (
               <>
-                <ul className="space-y-2 mb-4 max-h-[40vh] overflow-y-auto">
-                  {parsed.slice(0, 30).map((p, i) => (
+                <ul className="space-y-2 mb-4">
+                  {parsed.map((p, i) => (
                     <Card key={i} className="p-3">
-                      <div className="flex items-baseline gap-2 mb-1">
-                        <span className="font-mono text-[10px] text-[var(--ink-soft)]">#{i + 1}</span>
-                        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--accent)]">{p.category}</span>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="font-mono text-[10px] text-[var(--ink-soft)] shrink-0">#{i + 1}</span>
+                        <select
+                          value={p.category}
+                          onChange={e => setRowCategory(i, e.target.value)}
+                          className="text-[10px] uppercase font-mono tracking-[0.18em] text-[var(--accent)] bg-transparent border border-[var(--hairline)] rounded-md px-1.5 py-0.5"
+                        >
+                          {CATEGORIES.map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                        <button onClick={() => removeRow(i)} className="ml-auto text-[var(--ink-soft)] p-1">
+                          <TrashIcon className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                       <div className="font-display text-sm leading-snug mb-1">{p.question}</div>
                       <div className="text-xs text-[var(--ink-soft)] flex items-start gap-1">
@@ -146,7 +167,7 @@ export default function BulkImport() {
         )}
 
         {imported > 0 && (
-          <div className="mt-5 p-4 rounded-2xl bg-[#0F2F1A]/40 text-[#4ADE80] flex items-center gap-3">
+          <div className="mt-5 p-4 rounded-2xl bg-[var(--accent-soft)] text-[var(--accent)] flex items-center gap-3">
             <CheckIcon className="w-5 h-5" />
             <span className="font-display">{t('admin.imported', { count: imported })}</span>
             <button onClick={() => navigate('/admin/questions')} className="ml-auto text-xs uppercase font-mono tracking-[0.18em]">→</button>

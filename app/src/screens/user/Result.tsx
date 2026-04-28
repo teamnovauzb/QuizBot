@@ -127,11 +127,19 @@ export default function Result() {
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--ink-soft)] opacity-70 mb-1">№{q.number} · {q.category}</div>
+                    {q.imageUrl && (
+                      <img src={q.imageUrl} alt="" className="w-full max-h-40 object-contain rounded-lg mb-2 bg-[var(--paper)]" loading="lazy" />
+                    )}
                     <div className="text-sm leading-snug font-display">{q.question}</div>
                     {!a.correct && (
                       <div className="mt-2 text-xs text-[var(--accent)] flex items-start gap-1.5">
                         <span className="font-mono">→</span>
                         <span>{q.options[q.correctIndex]}</span>
+                      </div>
+                    )}
+                    {q.explanation && (
+                      <div className="mt-2 text-xs text-[var(--ink-soft)] italic font-display border-l-2 border-[var(--accent)] pl-2">
+                        {q.explanation}
                       </div>
                     )}
                   </div>

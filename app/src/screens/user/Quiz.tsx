@@ -220,8 +220,31 @@ export default function Quiz() {
                 {q.number.toString().padStart(2, '0')}
               </span>
               <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--accent)]">{q.category}</span>
+              {q.difficulty && (
+                <span className={clsx(
+                  'font-mono text-[9px] uppercase tracking-[0.14em] px-1.5 py-0.5 rounded',
+                  q.difficulty === 'easy' && 'bg-[var(--accent-soft)] text-[var(--accent)]',
+                  q.difficulty === 'medium' && 'bg-[var(--paper-2)] text-[var(--ink-soft)] border border-[var(--hairline)]',
+                  q.difficulty === 'hard' && 'bg-[#F87171]/15 text-[#F87171]',
+                )}>{t(`difficulty.${q.difficulty}`)}</span>
+              )}
             </div>
-            <h2 className="font-display text-[26px] leading-[1.15] tracking-tight text-[var(--ink)]">
+            {q.imageUrl && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3, ease: [0.2, 0.8, 0.2, 1] }}
+                className="mb-3 -mx-1 rounded-2xl overflow-hidden border border-[var(--hairline)] bg-[var(--paper-2)]"
+              >
+                <img
+                  src={q.imageUrl}
+                  alt=""
+                  className="w-full max-h-[40vh] object-contain"
+                  loading="lazy"
+                />
+              </motion.div>
+            )}
+            <h2 className="font-display text-[22px] leading-[1.2] tracking-tight text-[var(--ink)]">
               {q.question}
             </h2>
           </motion.div>

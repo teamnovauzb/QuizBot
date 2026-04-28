@@ -154,12 +154,76 @@ export async function deleteAssignment(id: string): Promise<Res<void>> {
   return { ok: true, data: undefined }
 }
 
+export async function updateAssignment(id: string, patch: Partial<AssignmentRow>): Promise<Res<void>> {
+  if (!supabase) return err('disabled')
+  const update: Record<string, unknown> = {}
+  if (patch.title !== undefined) update.title = patch.title
+  if (patch.description !== undefined) update.description = patch.description
+  if (patch.group_id !== undefined) update.group_id = patch.group_id
+  if (patch.question_ids !== undefined) update.question_ids = patch.question_ids
+  if (patch.time_per_q !== undefined) update.time_per_q = patch.time_per_q
+  if (patch.deadline !== undefined) update.deadline = patch.deadline
+  const { error } = await supabase.from('assignments').update(update).eq('id', id)
+  if (error) return err(error.message)
+  return { ok: true, data: undefined }
+}
+
+export async function fetchAssignmentCompletions(assignmentId: string): Promise<Res<{ user_id: number; score: number; total: number; completed_at: string }[]>> {
+  if (!supabase) return err('disabled')
+  const { data, error } = await supabase.from('assignment_completions').select('user_id, score, total, completed_at').eq('assignment_id', assignmentId)
+  if (error) return err(error.message)
+  return { ok: true, data: data as any }
+}
+
 export async function recordAssignmentCompletion(assignmentId: string, attemptId: string, score: number, total: number): Promise<Res<void>> {
   if (!supabase) return err('disabled')
   const { error } = await supabase.from('assignment_completions').insert({
     assignment_id: assignmentId, attempt_id: attemptId, score, total,
   })
   if (error && error.code !== '23505') return err(error.message)
+  return { ok: true, data: undefined }
+}
+
+// ────────────── BROADCASTS HISTORY ──────────────
+export type BroadcastRow = {
+  id: string
+  sent_at: string
+  sent_by: number
+  recipients: 'all' | 'admins' | 'users'
+  recipient_count: number
+  title: string
+  body: string
+}
+
+export async function fetchBroadcasts(limit = 50): Promise<Res<(BroadcastRow & { sent: number; failed: number; blocked: number })[]>> {
+  if (!supabase) return err('disabled')
+  const { data, error } = await supabase.from('broadcasts').select('*').order('sent_at', { ascending: false }).limit(limit)
+  if (error) return err(error.message)
+  // delivery counts in parallel
+  const rows = data as BroadcastRow[]
+  const stats = await Promise.all(rows.map(async b => {
+    const { data: d } = await supabase!.from('broadcast_deliveries').select('status').eq('broadcast_id', b.id)
+    const arr = (d as { status: string }[] | null) ?? []
+    const sent = arr.filter(x => x.status === 'sent').length
+    const failed = arr.filter(x => x.status === 'failed').length
+    const blocked = arr.filter(x => x.status === 'blocked').length
+    return { ...b, sent, failed, blocked }
+  }))
+  return { ok: true, data: stats }
+}
+
+// ────────────── GROUPS (extended) ──────────────
+export async function updateGroup(id: string, patch: { name?: string; admin_id?: number }): Promise<Res<void>> {
+  if (!supabase) return err('disabled')
+  const { error } = await supabase.from('groups').update(patch).eq('id', id)
+  if (error) return err(error.message)
+  return { ok: true, data: undefined }
+}
+
+export async function setUserGroup(telegramId: number, groupId: string | null): Promise<Res<void>> {
+  if (!supabase) return err('disabled')
+  const { error } = await supabase.from('users').update({ group_id: groupId }).eq('telegram_id', telegramId)
+  if (error) return err(error.message)
   return { ok: true, data: undefined }
 }
 

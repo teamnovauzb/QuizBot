@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import toast from 'react-hot-toast'
 import { useStore } from '../../store'
 import { PageHeader, Card } from '../../components/Shell'
 import { PlusIcon, EditIcon, TrashIcon, SearchIcon, XIcon, CheckIcon, BookIcon } from '../../components/Icons'
-import { CATEGORIES, type Question } from '../../data/questions'
+import { CATEGORIES, type Question, type Difficulty } from '../../data/questions'
 import clsx from 'clsx'
-import { haptic } from '../../lib/telegram'
+import { haptic, confirmDialog } from '../../lib/telegram'
+import { uploadQuestionImage } from '../../lib/storage'
 
 export default function Questions() {
   const { t } = useTranslation()
@@ -52,7 +54,6 @@ export default function Questions() {
         }
       />
 
-      {/* Search */}
       <div className="px-5 mt-2">
         <div className="flex items-center gap-2 px-4 py-3 rounded-2xl border border-[var(--hairline)] bg-[var(--paper-2)]">
           <SearchIcon className="w-4 h-4 stroke-[var(--ink-soft)]" />
@@ -65,7 +66,6 @@ export default function Questions() {
         </div>
       </div>
 
-      {/* Filter */}
       <div className="mt-3 px-5">
         <div className="flex gap-2 overflow-x-auto pb-2 -mx-5 px-5">
           <FilterPill active={filter === 'all'} onClick={() => setFilter('all')}>{t('common.all')}</FilterPill>
@@ -75,7 +75,6 @@ export default function Questions() {
         </div>
       </div>
 
-      {/* List */}
       <div className="px-5 mt-3 space-y-2">
         {filtered.map((q, i) => (
           <Card key={q.id} className="p-4 paper-rise" >
@@ -84,7 +83,18 @@ export default function Questions() {
                 {(i + 1).toString().padStart(3, '0')}
               </span>
               <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--accent)]">{q.category}</span>
+              {q.difficulty && (
+                <span className={clsx(
+                  'font-mono text-[9px] uppercase tracking-[0.14em] px-1.5 py-0.5 rounded',
+                  q.difficulty === 'easy' && 'bg-[var(--accent-soft)] text-[var(--accent)]',
+                  q.difficulty === 'medium' && 'bg-[var(--paper-2)] text-[var(--ink-soft)] border border-[var(--hairline)]',
+                  q.difficulty === 'hard' && 'bg-[#F87171]/15 text-[#F87171]',
+                )}>{t(`difficulty.${q.difficulty}`)}</span>
+              )}
             </div>
+            {q.imageUrl && (
+              <img src={q.imageUrl} alt="" className="w-full h-32 object-cover rounded-xl mb-2" />
+            )}
             <div className="font-display text-base leading-snug pr-2">{q.question}</div>
             <div className="mt-2 text-xs font-mono text-[var(--ink-soft)] opacity-70 flex items-center gap-1">
               <CheckIcon className="w-3 h-3 stroke-[var(--accent)]" />
@@ -98,7 +108,11 @@ export default function Questions() {
                 <EditIcon className="w-3.5 h-3.5" /> {t('common.edit')}
               </button>
               <button
-                onClick={() => { if (confirm(t('admin.confirmDelete'))) { removeQ(q.id); haptic('heavy') } }}
+                onClick={async () => {
+                  if (!await confirmDialog(t('admin.confirmDelete'))) return
+                  removeQ(q.id); haptic('heavy')
+                  toast.success(t('admin.deletedToast'))
+                }}
                 className="rounded-xl py-2 px-3 border border-[var(--hairline)] text-[var(--ink-soft)]"
               >
                 <TrashIcon className="w-3.5 h-3.5" />
@@ -114,8 +128,21 @@ export default function Questions() {
             initial={editing}
             onClose={() => { setEditing(null); setCreating(false) }}
             onSave={(data) => {
-              if (editing) updateQ(editing.id, data)
-              else addQ({ ...data, options: data.options ?? ['', '', '', ''], correctIndex: data.correctIndex ?? 0, category: data.category ?? 'Umumiy', question: data.question ?? '' })
+              if (editing) {
+                updateQ(editing.id, data)
+                toast.success(t('admin.savedToast'))
+              } else {
+                addQ({
+                  question: data.question ?? '',
+                  options: data.options ?? ['', '', '', ''],
+                  correctIndex: data.correctIndex ?? 0,
+                  category: data.category ?? 'Umumiy',
+                  explanation: data.explanation,
+                  difficulty: data.difficulty,
+                  imageUrl: data.imageUrl,
+                })
+                toast.success(t('admin.createdToast'))
+              }
               setEditing(null); setCreating(false)
             }}
           />
@@ -147,8 +174,25 @@ function QuestionEditor({ initial, onClose, onSave }: {
   const [options, setOptions] = useState<string[]>(initial?.options ?? ['', '', '', ''])
   const [correctIndex, setCorrectIndex] = useState<number>(initial?.correctIndex ?? 0)
   const [category, setCategory] = useState<string>(initial?.category ?? 'Umumiy')
-  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium')
+  const [difficulty, setDifficulty] = useState<Difficulty>(initial?.difficulty ?? 'medium')
   const [explanation, setExplanation] = useState<string>(initial?.explanation ?? '')
+  const [imageUrl, setImageUrl] = useState<string>(initial?.imageUrl ?? '')
+  const [uploading, setUploading] = useState(false)
+
+  async function pickImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    const r = await uploadQuestionImage(file)
+    setUploading(false)
+    if (r.ok) {
+      setImageUrl(r.url)
+      toast.success(t('admin.imageUploaded'))
+    } else {
+      toast.error(`${t('admin.imageFailed')}: ${r.error}`)
+    }
+    e.target.value = ''
+  }
 
   return (
     <motion.div
@@ -178,6 +222,25 @@ function QuestionEditor({ initial, onClose, onSave }: {
               rows={3}
               className="w-full px-3 py-2 rounded-xl border border-[var(--hairline)] bg-[var(--paper-2)] text-base resize-none"
             />
+          </Field>
+          <Field label={t('admin.image')}>
+            {imageUrl ? (
+              <div className="relative">
+                <img src={imageUrl} alt="" className="w-full h-40 object-cover rounded-xl" />
+                <button
+                  onClick={() => setImageUrl('')}
+                  className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/60 text-white grid place-items-center"
+                  type="button"
+                >
+                  <XIcon className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <label className="block w-full px-3 py-3 rounded-xl border border-dashed border-[var(--hairline-strong)] bg-[var(--paper-2)] text-center text-sm text-[var(--ink-soft)] cursor-pointer">
+                {uploading ? `${t('common.loading')}...` : t('admin.imageUpload')}
+                <input type="file" accept="image/*" onChange={pickImage} className="hidden" disabled={uploading} />
+              </label>
+            )}
           </Field>
           <Field label={t('admin.category')}>
             <div className="flex gap-2 flex-wrap">
@@ -238,7 +301,12 @@ function QuestionEditor({ initial, onClose, onSave }: {
             {t('admin.cancel')}
           </button>
           <button
-            onClick={() => onSave({ question, options, correctIndex, category, explanation: explanation || undefined } as any)}
+            onClick={() => onSave({
+              question, options, correctIndex, category,
+              difficulty,
+              explanation: explanation || undefined,
+              imageUrl: imageUrl || undefined,
+            })}
             disabled={!question || options.some(o => !o)}
             className="flex-[2] rounded-2xl py-3 bg-[var(--ink)] text-[var(--paper)] disabled:opacity-50 font-display text-base"
           >

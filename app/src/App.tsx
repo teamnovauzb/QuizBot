@@ -31,10 +31,12 @@ import SuperAdmins from './screens/superadmin/Admins'
 import SuperAllUsers from './screens/superadmin/AllUsers'
 import SuperContent from './screens/superadmin/Content'
 import SuperBroadcast from './screens/superadmin/Broadcast'
+import SuperBroadcasts from './screens/superadmin/Broadcasts'
 import SuperCategories from './screens/superadmin/Categories'
 import SuperBotConfig from './screens/superadmin/BotConfig'
 import SuperAnalytics from './screens/superadmin/Analytics'
 import SuperAudit from './screens/superadmin/Audit'
+import SuperGroups from './screens/superadmin/Groups'
 
 import { SUPABASE_ENABLED, supabase } from './lib/supabase'
 import { useStore } from './store'
@@ -171,7 +173,9 @@ export default function App() {
           <Route path="users" element={<SuperAllUsers />} />
           <Route path="content" element={<SuperContent />} />
           <Route path="categories" element={<SuperCategories />} />
+          <Route path="groups" element={<SuperGroups />} />
           <Route path="broadcast" element={<SuperBroadcast />} />
+          <Route path="broadcasts" element={<SuperBroadcasts />} />
           <Route path="config" element={<SuperBotConfig />} />
           <Route path="audit" element={<SuperAudit />} />
         </Route>

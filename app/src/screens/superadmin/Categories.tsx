@@ -6,7 +6,8 @@ import { PlusIcon, TrashIcon, XIcon, EditIcon } from '../../components/Icons'
 import { fetchCategories, upsertCategory, deleteCategory, type CategoryRow } from '../../lib/api2'
 import { SUPABASE_ENABLED } from '../../lib/supabase'
 import { CATEGORIES } from '../../data/questions'
-import { haptic } from '../../lib/telegram'
+import { haptic, confirmDialog } from '../../lib/telegram'
+import toast from 'react-hot-toast'
 
 const FALLBACK: CategoryRow[] = CATEGORIES.map((c, i) => ({
   slug: c, name_uz: c, name_ru: c, name_en: c, icon: null, sort_order: (i + 1) * 10, active: true,
@@ -46,8 +47,8 @@ export default function Categories() {
             </div>
             <button onClick={() => setEditing(c)} className="p-2 text-[var(--ink-soft)]"><EditIcon className="w-4 h-4" /></button>
             <button onClick={async () => {
-              if (!confirm(t('admin.confirmDelete'))) return
-              await deleteCategory(c.slug); haptic('heavy'); reload()
+              if (!await confirmDialog(t('admin.confirmDelete'))) return
+              await deleteCategory(c.slug); haptic('heavy'); toast.success(t('admin.deletedToast')); reload()
             }} className="p-2 text-[var(--ink-soft)]"><TrashIcon className="w-4 h-4" /></button>
           </Card>
         ))}

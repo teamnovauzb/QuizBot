@@ -99,7 +99,7 @@ export async function fetchQuestions(): Promise<Res<Question[]>> {
   if (error) return err(error.message)
   return {
     ok: true,
-    data: (data as Tables['questions'][]).map(r => ({
+    data: (data as any[]).map(r => ({
       id: r.id,
       number: r.number,
       category: r.category,
@@ -107,19 +107,31 @@ export async function fetchQuestions(): Promise<Res<Question[]>> {
       options: r.options,
       correctIndex: r.correct_index,
       explanation: r.explanation ?? undefined,
+      difficulty: r.difficulty ?? undefined,
+      imageUrl: r.image_url ?? undefined,
     })),
   }
 }
 
 export async function createQuestion(q: Omit<Question, 'id' | 'number'>): Promise<Res<Question>> {
   if (!supabase) return err('disabled')
-  const { data, error } = await supabase.from('questions').insert({
+  const insert: Record<string, unknown> = {
     category: q.category, question: q.question, options: q.options, correct_index: q.correctIndex,
-  }).select('*').single()
+  }
+  if (q.explanation !== undefined) insert.explanation = q.explanation
+  if (q.difficulty !== undefined) insert.difficulty = q.difficulty
+  if (q.imageUrl !== undefined) insert.image_url = q.imageUrl
+  const { data, error } = await supabase.from('questions').insert(insert).select('*').single()
   if (error) return err(error.message)
   return {
     ok: true,
-    data: { id: data.id, number: data.number, category: data.category, question: data.question, options: data.options, correctIndex: data.correct_index },
+    data: {
+      id: data.id, number: data.number, category: data.category, question: data.question,
+      options: data.options, correctIndex: data.correct_index,
+      explanation: data.explanation ?? undefined,
+      difficulty: data.difficulty ?? undefined,
+      imageUrl: data.image_url ?? undefined,
+    },
   }
 }
 
@@ -131,6 +143,8 @@ export async function updateQuestion(id: string, patch: Partial<Question>): Prom
   if (patch.correctIndex !== undefined) update.correct_index = patch.correctIndex
   if (patch.category !== undefined) update.category = patch.category
   if (patch.explanation !== undefined) update.explanation = patch.explanation
+  if (patch.difficulty !== undefined) update.difficulty = patch.difficulty
+  if (patch.imageUrl !== undefined) update.image_url = patch.imageUrl
   update.updated_at = new Date().toISOString()
   const { error } = await supabase.from('questions').update(update).eq('id', id)
   if (error) return err(error.message)

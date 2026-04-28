@@ -1,19 +1,38 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useStore } from '../../store'
 import { PageHeader, Card } from '../../components/Shell'
 import { SearchIcon } from '../../components/Icons'
 import { relTime } from '../../lib/time'
+import { fetchAudit } from '../../lib/api'
+import { SUPABASE_ENABLED } from '../../lib/supabase'
+import { SkeletonRow } from '../../components/Skeleton'
 
 export default function Audit() {
   const { t } = useTranslation()
-  const audit = useStore(s => s.audit)
+  const localAudit = useStore(s => s.audit)
   const users = useStore(s => s.users)
   const [search, setSearch] = useState('')
   const [role, setRole] = useState<'all' | 'user' | 'admin' | 'superadmin'>('all')
+  const [dbAudit, setDbAudit] = useState<typeof localAudit | null>(null)
+
+  // Pull from DB on mount, fall back to local if disabled or empty
+  useEffect(() => {
+    if (!SUPABASE_ENABLED) { setDbAudit([]); return }
+    fetchAudit(200).then(r => setDbAudit(r.ok ? r.data : []))
+  }, [])
+
+  // Merge: DB first (canonical), then local-only entries that aren't in DB yet
+  const merged = useMemo(() => {
+    if (dbAudit === null) return null
+    const byId = new Set(dbAudit.map(e => e.id))
+    return [...dbAudit, ...localAudit.filter(e => !byId.has(e.id))]
+      .sort((a, b) => b.ts - a.ts)
+  }, [dbAudit, localAudit])
 
   const list = useMemo(() => {
-    return audit.filter(e => {
+    if (!merged) return null
+    return merged.filter(e => {
       if (role !== 'all' && e.actorRole !== role) return false
       if (search) {
         const u = users.find(u => u.telegramId === e.actor)
@@ -22,11 +41,11 @@ export default function Audit() {
       }
       return true
     })
-  }, [audit, search, role, users])
+  }, [merged, search, role, users])
 
   return (
     <div className="pb-28">
-      <PageHeader eyebrow={`${audit.length} entries`} title={t('super.auditLog')} />
+      <PageHeader eyebrow={`${merged?.length ?? 0} entries`} title={t('super.auditLog')} />
       <div className="px-5 mt-2">
         <div className="flex items-center gap-2 px-4 py-3 rounded-2xl border border-[var(--hairline)] bg-[var(--paper-2)]">
           <SearchIcon className="w-4 h-4 stroke-[var(--ink-soft)]" />
@@ -45,7 +64,8 @@ export default function Audit() {
       </div>
 
       <div className="px-5 mt-4">
-        {list.length === 0 ? (
+        {list === null ? <SkeletonRow count={6} /> :
+          list.length === 0 ? (
           <div className="text-center py-10">
             <div className="font-display text-6xl text-[var(--ink-soft)] opacity-20 mb-2">∅</div>
             <div className="text-sm font-display italic text-[var(--ink-soft)]">{t('common.empty')}</div>
