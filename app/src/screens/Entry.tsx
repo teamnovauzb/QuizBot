@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 
 import { useStore } from '../store'
-import { initTelegram, haptic, isTelegram } from '../lib/telegram'
+import { initTelegram, haptic, isTelegram, getTg } from '../lib/telegram'
 import { Shell } from '../components/Shell'
 import { LangSwitcher } from '../components/LangSwitcher'
 import {
@@ -54,6 +54,20 @@ export default function Entry() {
   async function shareViaTelegram() {
     haptic('medium')
     setBusy(true)
+
+    // Ensure we have a tgUser BEFORE sharing — after logout, signedOut blocks
+    // auto-restore in the mount effect, so on first share-tap tgUser may still
+    // be null. Pull it from Telegram WebApp now; setTgUser also clears signedOut.
+    let user = tgUser
+    if (!user) {
+      const tg = getTg()
+      const fromTg = tg?.initDataUnsafe?.user
+      if (fromTg) {
+        setTgUser(fromTg)
+        user = fromTg as typeof tgUser
+      }
+    }
+
     const r = await requestTelegramContact()
     setBusy(false)
 
@@ -71,10 +85,10 @@ export default function Entry() {
     // not the WebApp). The bot's webhook will persist the real phone server-side;
     // we backfill it from the DB in the background below.
     const optimisticPhone = r.phone || '+998…'
-    if (tgUser) {
-      markCached(tgUser.id, optimisticPhone)
-      setPhone(tgUser.id, optimisticPhone)
-      if (r.phone) saveContactToDb(tgUser.id, r.phone)
+    if (user) {
+      markCached(user.id, optimisticPhone)
+      setPhone(user.id, optimisticPhone)
+      if (r.phone) saveContactToDb(user.id, r.phone)
     }
     toast.success(t('phone.thanks'))
     navigate('/u', { replace: true })
@@ -82,8 +96,8 @@ export default function Entry() {
     // Background: pull the real phone the bot just stored. Try a few times because
     // the bot webhook fires async; the DB row might be one Telegram round-trip behind.
     const sb = supabase
-    if (SUPABASE_ENABLED && sb && tgUser) {
-      const tid = tgUser.id
+    if (SUPABASE_ENABLED && sb && user) {
+      const tid = user.id
       let tries = 0
       const tick = async () => {
         tries++
