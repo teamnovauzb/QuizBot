@@ -32,12 +32,12 @@ export function PhoneShareCard() {
     const r = await requestTelegramContact()
     setBusy(false)
     if (r.ok && r.via === 'telegram') {
-      const phone = r.phone || ''
-      if (phone) {
-        markCached(tgUser.id, phone)
-        setPhone(tgUser.id, phone)
-        await saveContactToDb(tgUser.id, phone)
-      }
+      // Mark verified immediately even if Telegram didn't include phone in the
+      // WebApp event — bot will persist the real phone server-side.
+      const phone = r.phone || '+998…'
+      markCached(tgUser.id, phone)
+      setPhone(tgUser.id, phone)
+      if (r.phone) saveContactToDb(tgUser.id, r.phone)
       toast.success(t('phone.thanks'))
     } else if (r.ok === false) {
       if (r.reason === 'unavailable') setManualMode(true)

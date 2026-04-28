@@ -17,6 +17,7 @@ import {
 import {
   requestTelegramContact, manualPhoneAccept, fmtPhone, markCached, saveContactToDb, isCachedShared,
 } from '../lib/phone'
+import { supabase, SUPABASE_ENABLED } from '../lib/supabase'
 
 export default function Entry() {
   const navigate = useNavigate()
@@ -56,20 +57,51 @@ export default function Entry() {
     const r = await requestTelegramContact()
     setBusy(false)
 
-    if (r.ok && r.via === 'telegram') {
-      // Inside Telegram: bot receives the contact too; locally optimistic
-      const phone = r.phone || ''
-      if (tgUser) {
-        if (phone) markCached(tgUser.id, phone)
-        if (phone) setPhone(tgUser.id, phone)
-        if (phone) saveContactToDb(tgUser.id, phone)
+    if (!r.ok || r.via !== 'telegram') {
+      if (r.ok === false) {
+        if (r.reason === 'unavailable') setShowManual(true)
+        else if (r.reason === 'cancelled') toast(t('phone.cancelled'))
+        else toast.error(t('phone.error'))
       }
-      toast.success(t('phone.thanks'))
-      navigate('/u', { replace: true })
-    } else if (r.ok === false) {
-      if (r.reason === 'unavailable') setShowManual(true)
-      else if (r.reason === 'cancelled') toast(t('phone.cancelled'))
-      else toast.error(t('phone.error'))
+      return
+    }
+
+    // Tap-Share completed. Mark verified IMMEDIATELY — Telegram's contactRequested
+    // event often arrives without a phone string (the actual number goes to the bot,
+    // not the WebApp). The bot's webhook will persist the real phone server-side;
+    // we backfill it from the DB in the background below.
+    const optimisticPhone = r.phone || '+998…'
+    if (tgUser) {
+      markCached(tgUser.id, optimisticPhone)
+      setPhone(tgUser.id, optimisticPhone)
+      if (r.phone) saveContactToDb(tgUser.id, r.phone)
+    }
+    toast.success(t('phone.thanks'))
+    navigate('/u', { replace: true })
+
+    // Background: pull the real phone the bot just stored. Try a few times because
+    // the bot webhook fires async; the DB row might be one Telegram round-trip behind.
+    const sb = supabase
+    if (SUPABASE_ENABLED && sb && tgUser) {
+      const tid = tgUser.id
+      let tries = 0
+      const tick = async () => {
+        tries++
+        try {
+          const { data } = await sb
+            .from('users')
+            .select('phone, phone_verified')
+            .eq('telegram_id', tid)
+            .maybeSingle()
+          if (data?.phone) {
+            markCached(tid, data.phone)
+            setPhone(tid, data.phone)
+            return
+          }
+        } catch { /* ignore */ }
+        if (tries < 5) setTimeout(tick, 1200)
+      }
+      setTimeout(tick, 800)
     }
   }
 
