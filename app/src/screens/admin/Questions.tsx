@@ -31,7 +31,7 @@ export default function Questions() {
   })
 
   return (
-    <div className="pb-28">
+    <div className="pb-32">
       <PageHeader
         eyebrow={`${questions.length} ${t('home.questions')}`}
         title={t('nav.questions')}

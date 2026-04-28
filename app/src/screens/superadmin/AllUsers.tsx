@@ -24,7 +24,7 @@ export default function AllUsers() {
     .sort((a, b) => b.lastActive - a.lastActive)
 
   return (
-    <div className="pb-28">
+    <div className="pb-32">
       <PageHeader eyebrow={`${users.length} ${t('nav.users').toLowerCase()}`} title={t('nav.users')} />
 
       <div className="px-5 mt-2">

@@ -79,8 +79,13 @@
 }
 
 html, body, #root {
-  height: 100%;
   margin: 0;
+  /* Default to safe svh, overridden by --tg-vh inside Telegram */
+  min-height: 100svh;
+}
+
+:root {
+  --tg-vh: 100svh;
 }
 
 body {

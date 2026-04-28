@@ -8,6 +8,9 @@ type TgWebApp = {
   colorScheme: 'light' | 'dark'
   platform?: string
   version?: string
+  viewportHeight?: number
+  viewportStableHeight?: number
+  isExpanded?: boolean
   HapticFeedback?: { impactOccurred: (s: 'light' | 'medium' | 'heavy') => void; notificationOccurred: (t: 'success' | 'error' | 'warning') => void; selectionChanged: () => void }
   BackButton?: { show: () => void; hide: () => void; onClick: (cb: () => void) => void; offClick: (cb: () => void) => void }
   MainButton?: { show: () => void; hide: () => void; setText: (t: string) => void; onClick: (cb: () => void) => void; offClick: (cb: () => void) => void; enable: () => void; disable: () => void }
@@ -48,8 +51,20 @@ export function initTelegram() {
     tg.disableVerticalSwipes?.()
     // Confirm before close
     tg.enableClosingConfirmation?.()
+    // Track viewport height — Telegram mobile sometimes has the wrong svh,
+    // so we mirror its `viewportStableHeight` into a CSS var. See main.tsx.
+    setTgViewport()
+    tg.onEvent?.('viewportChanged', setTgViewport)
   } catch { /* noop */ }
   return tg
+}
+
+function setTgViewport() {
+  const tg = getTg()
+  const root = typeof document !== 'undefined' ? document.documentElement : null
+  if (!root) return
+  const h = tg?.viewportStableHeight ?? tg?.viewportHeight ?? window.innerHeight
+  if (h && h > 100) root.style.setProperty('--tg-vh', `${h}px`)
 }
 
 /** True when the page is rendered inside the Telegram app (not a regular browser). */

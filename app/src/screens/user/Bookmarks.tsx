@@ -17,7 +17,7 @@ export default function Bookmarks() {
   )
 
   return (
-    <div className="pb-28">
+    <div className="pb-32">
       <PageHeader eyebrow={`${list.length} ${t('home.questions')}`} title={t('nav.bookmarks')} />
 
       {list.length === 0 ? (

@@ -41,7 +41,7 @@ export default function Achievements() {
   const lang = i18n.language as 'uz' | 'ru' | 'en'
 
   return (
-    <div className="pb-28">
+    <div className="pb-32">
       <PageHeader eyebrow={`${all.size}/${defs.length} ${t('common.unlocked')}`} title={t('nav.achievements')} />
 
       <div className="px-5 mt-3 grid grid-cols-2 gap-3">

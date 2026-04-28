@@ -8,7 +8,10 @@ import clsx from 'clsx'
  */
 export function Shell({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={clsx('relative aurora grain min-h-[100svh]', className)}>
+    <div
+      className={clsx('relative aurora grain', className)}
+      style={{ minHeight: 'var(--tg-vh, 100svh)' }}
+    >
       {children}
     </div>
   )

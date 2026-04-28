@@ -18,7 +18,7 @@ export default function Assignments() {
   }, [])
 
   return (
-    <div className="pb-28">
+    <div className="pb-32">
       <PageHeader eyebrow={t('app.tagline')} title={t('nav.assignments')} />
       <div className="px-5 mt-3">
         {list === null ? <SkeletonRow count={3} /> : list.length === 0 ? (

@@ -23,7 +23,7 @@ export default function Groups() {
   const editing = useMemo(() => groups.find(g => g.id === editingId) ?? null, [groups, editingId])
 
   return (
-    <div className="pb-28">
+    <div className="pb-32">
       <PageHeader
         eyebrow={`${groups.length} ${t('nav.groups').toLowerCase()}`}
         title={t('nav.groups')}

@@ -44,7 +44,7 @@ export default function Audit() {
   }, [merged, search, role, users])
 
   return (
-    <div className="pb-28">
+    <div className="pb-32">
       <PageHeader eyebrow={`${merged?.length ?? 0} entries`} title={t('super.auditLog')} />
       <div className="px-5 mt-2">
         <div className="flex items-center gap-2 px-4 py-3 rounded-2xl border border-[var(--hairline)] bg-[var(--paper-2)]">

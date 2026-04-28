@@ -56,8 +56,10 @@ type State = {
   hydrateFromSupabase: () => Promise<void>
 }
 
-// ─────────── seed data (used when Supabase is disabled) ───────────
-const seedUsers: AppUser[] = [
+// ─────────── seed data (used ONLY when Supabase is disabled / offline dev) ───────────
+// When Supabase is enabled, all collections start empty and hydrate from the DB
+// — no mock users, groups, attempts, or audit entries leak into the live app.
+const seedUsers: AppUser[] = SUPABASE_ENABLED ? [] : [
   { telegramId: 100001, name: 'Asadbek Karimov', username: 'asadbek', role: 'superadmin', joinedAt: Date.now() - 86400000 * 90, lastActive: Date.now() - 1000 * 60 * 12 },
   { telegramId: 200001, name: 'Dilnoza Yusupova', username: 'dilnoza_y', role: 'admin', joinedAt: Date.now() - 86400000 * 60, lastActive: Date.now() - 1000 * 60 * 45, groupId: 'g1' },
   { telegramId: 200002, name: 'Bekzod Tursunov', username: 'bek_t', role: 'admin', joinedAt: Date.now() - 86400000 * 50, lastActive: Date.now() - 1000 * 60 * 60 * 3, groupId: 'g2' },
@@ -69,31 +71,34 @@ const seedUsers: AppUser[] = [
   { telegramId: 300006, name: 'Otabek Yusupov', username: 'otabekk', role: 'user', joinedAt: Date.now() - 86400000 * 6, lastActive: Date.now() - 1000 * 60 * 60 * 1.5, groupId: 'g2' },
 ]
 
-const seedGroups: Group[] = [
+const seedGroups: Group[] = SUPABASE_ENABLED ? [] : [
   { id: 'g1', name: 'Guruh 101 — Tibbiyot fakulteti', adminId: 200001, memberIds: [300001, 300002, 300005] },
   { id: 'g2', name: 'Guruh 202 — Stomatologiya', adminId: 200002, memberIds: [300003, 300004, 300006] },
 ]
 
-const seedAttempts: Attempt[] = []
-const userIds = [300001, 300002, 300003, 300004, 300006]
-for (let i = 0; i < 24; i++) {
-  const uid = userIds[i % userIds.length]
-  const startedAt = Date.now() - 86400000 * (i / 2 + 0.3) - i * 1000 * 60 * 17
-  const total = 10
-  const score = Math.floor(4 + Math.random() * 7)
-  seedAttempts.push({
-    id: `att-${i}`,
-    userId: uid,
-    startedAt,
-    finishedAt: startedAt + 1000 * 60 * (3 + Math.random() * 5),
-    durationMs: 1000 * 60 * (3 + Math.random() * 5),
-    questionIds: QUESTIONS.slice(i % 50, (i % 50) + total).map(q => q.id),
-    answers: [],
-    score,
-    total,
-    category: ['Excel', 'Word', 'Hardware', 'Cloud', 'OS'][i % 5],
-  })
-}
+const seedAttempts: Attempt[] = SUPABASE_ENABLED ? [] : (() => {
+  const arr: Attempt[] = []
+  const userIds = [300001, 300002, 300003, 300004, 300006]
+  for (let i = 0; i < 24; i++) {
+    const uid = userIds[i % userIds.length]
+    const startedAt = Date.now() - 86400000 * (i / 2 + 0.3) - i * 1000 * 60 * 17
+    const total = 10
+    const score = Math.floor(4 + Math.random() * 7)
+    arr.push({
+      id: `att-${i}`,
+      userId: uid,
+      startedAt,
+      finishedAt: startedAt + 1000 * 60 * (3 + Math.random() * 5),
+      durationMs: 1000 * 60 * (3 + Math.random() * 5),
+      questionIds: QUESTIONS.slice(i % 50, (i % 50) + total).map(q => q.id),
+      answers: [],
+      score,
+      total,
+      category: ['Excel', 'Word', 'Hardware', 'Cloud', 'OS'][i % 5],
+    })
+  }
+  return arr
+})()
 
 // fire-and-forget helper: log Supabase errors but never throw
 function fnf<T>(p: Promise<T>) { p.catch(e => console.warn('[supabase]', e)) }
@@ -277,12 +282,16 @@ export const useStore = create<State>()(persist((set, get) => ({
       const ua = await api2.fetchUserAchievements(tgu.id)
       if (ua.ok) set({ unlockedAchievements: ua.data.map(x => x.slug) })
     }
+    // When Supabase is the source of truth we must REPLACE, not fall back to
+    // local mock/persisted state — otherwise stale seed users/attempts leak
+    // into the leaderboard and history. Only `questions` falls back, since
+    // the static QUESTIONS bundle is intentionally always available.
     set({
-      users: users.data.length ? users.data : get().users,
-      groups: groups.data.length ? groups.data : get().groups,
+      users: users.data,
+      groups: groups.data,
       questions: questions.data.length ? questions.data : get().questions,
-      attempts: attempts.data.length ? attempts.data : get().attempts,
-      audit: audit.ok ? audit.data : get().audit,
+      attempts: attempts.data,
+      audit: audit.ok ? audit.data : [],
       bookmarks: bookmarks.ok ? bookmarks.data : get().bookmarks,
       hydrated: true,
       syncing: false,
@@ -291,6 +300,23 @@ export const useStore = create<State>()(persist((set, get) => ({
   },
 }), {
   name: 'shifokorat-state',
+  // bump when seed/shape changes so users get a clean slate
+  // v2: gated mock seeds behind SUPABASE_ENABLED — purge stale mock users/attempts
+  version: 2,
+  migrate: (persisted: any, version: number) => {
+    // From v1 → v2: drop persisted users/groups/attempts/audit so the live
+    // Supabase fetch is the single source of truth (no mock leaderboard rows).
+    if (version < 2 && SUPABASE_ENABLED && persisted) {
+      return {
+        ...persisted,
+        users: [],
+        groups: [],
+        attempts: [],
+        audit: [],
+      }
+    }
+    return persisted
+  },
   partialize: (s) => ({
     users: s.users,
     groups: s.groups,

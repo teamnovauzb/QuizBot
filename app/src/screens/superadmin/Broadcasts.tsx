@@ -26,7 +26,7 @@ export default function BroadcastHistory() {
   const data = list?.ok ? list.data : []
 
   return (
-    <div className="pb-28">
+    <div className="pb-32">
       <PageHeader
         eyebrow={`${data.length} ${t('broadcasts.title').toLowerCase()}`}
         title={t('broadcasts.title')}

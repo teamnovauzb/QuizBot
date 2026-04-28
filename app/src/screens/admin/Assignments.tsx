@@ -39,7 +39,7 @@ export default function AdminAssignments() {
   useEffect(() => { reload() }, [])
 
   return (
-    <div className="pb-28">
+    <div className="pb-32">
       <PageHeader
         eyebrow={myGroup?.name ?? t('common.all')}
         title={t('nav.assignments')}

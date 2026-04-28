@@ -9,7 +9,7 @@ import { ThemeToggle } from '../../components/ThemeToggle'
 import { PhoneShareCard } from '../../components/PhoneShare'
 import {
   ShieldIcon, UsersIcon, ArrowIcon, SendIcon, PhoneIcon, IdIcon, CheckBadgeIcon,
-  FlameIcon, SettingsIcon, LogoutIcon,
+  FlameIcon, SettingsIcon, LogoutIcon, BookIcon,
 } from '../../components/Icons'
 import { Heatmap } from '../../components/Heatmap'
 import { Ring } from '../../components/Ring'
@@ -76,7 +76,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="pb-28">
+    <div className="pb-32">
       {/* HERO with radial mint glow */}
       <div className="relative px-5 pt-[max(env(safe-area-inset-top),24px)] pb-32">
         <div className="absolute inset-x-0 top-0 h-[280px] -z-10">
@@ -168,7 +168,32 @@ export default function Profile() {
           </div>
         )}
 
-        {/* SETTINGS — matches the screenshot */}
+        {/* QUICK LINKS — Bookmarks moved here from main tab bar */}
+        <div className="fade-up grid grid-cols-2 gap-2" style={{ animationDelay: '0.18s' }}>
+          <Card className="p-4 flex items-center gap-3" onClick={() => navigate('/u/bookmarks')}>
+            <div className="w-10 h-10 rounded-xl bg-[var(--accent-soft)] grid place-items-center text-[var(--accent)]">
+              <BookIcon className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-display font-semibold text-sm truncate">{t('nav.bookmarks')}</div>
+              <div className="text-[10px] uppercase font-mono tracking-[0.18em] text-[var(--text-muted)]">
+                {useStore.getState().bookmarks.length}
+              </div>
+            </div>
+            <ArrowIcon className="w-4 h-4 stroke-[var(--text-muted)]" />
+          </Card>
+          <Card className="p-4 flex items-center gap-3" onClick={() => navigate('/u/achievements')}>
+            <div className="w-10 h-10 rounded-xl bg-[var(--accent-soft)] grid place-items-center text-[var(--accent)]">
+              <FlameIcon className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-display font-semibold text-sm truncate">{t('nav.achievements')}</div>
+            </div>
+            <ArrowIcon className="w-4 h-4 stroke-[var(--text-muted)]" />
+          </Card>
+        </div>
+
+        {/* SETTINGS — theme + language */}
         <div className="fade-up" style={{ animationDelay: '0.2s' }}>
           <SectionLabel>{t('nav.settings')}</SectionLabel>
           <Card className="p-5 space-y-5">

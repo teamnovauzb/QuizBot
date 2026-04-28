@@ -44,7 +44,7 @@ export default function AdminOverview() {
   }, [myAttempts])
 
   return (
-    <div className="pb-28">
+    <div className="pb-32">
       <PageHeader
         eyebrow={`${t('role.admin').toUpperCase()} · ${myGroup?.name ?? t('common.all')}`}
         title={t('admin.overview')}

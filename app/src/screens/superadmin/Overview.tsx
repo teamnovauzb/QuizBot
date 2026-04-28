@@ -31,7 +31,7 @@ export default function SuperOverview() {
   }, [attempts])
 
   return (
-    <div className="pb-28">
+    <div className="pb-32">
       <PageHeader
         eyebrow={`${t('role.superadmin').toUpperCase()} · SYS`}
         title={t('super.title')}

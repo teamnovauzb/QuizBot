@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useStore } from '../../store'
 import { PageHeader, Card } from '../../components/Shell'
 import { fetchLeaderboard, type LeaderboardRow } from '../../lib/api2'
-import { SUPABASE_ENABLED } from '../../lib/supabase'
+import { SUPABASE_ENABLED, supabase } from '../../lib/supabase'
 import { SkeletonRow } from '../../components/Skeleton'
 import clsx from 'clsx'
 
@@ -13,6 +13,7 @@ export default function Leaderboard() {
   const me = useStore(s => s.users.find(u => u.telegramId === tgUser?.id))
   const [scope, setScope] = useState<'global' | 'group'>('global')
   const [rows, setRows] = useState<LeaderboardRow[] | null>(null)
+  const [live, setLive] = useState(false)
 
   // local fallback (when Supabase off)
   const _allUsers = useStore(s => s.users)
@@ -53,9 +54,47 @@ export default function Leaderboard() {
     return () => { cancel = true }
   }, [scope, me?.groupId])
 
+  // ───────── Realtime subscription: refresh whenever attempts table changes ─────────
+  // Postgres LISTEN/NOTIFY via Supabase Realtime → debounced refetch keeps the
+  // leaderboard live without polling. Cleans up on scope change / unmount.
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || !supabase) return
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const refresh = () => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(async () => {
+        const r = await fetchLeaderboard({ groupId: scope === 'group' ? me?.groupId : undefined })
+        if (r.ok) setRows(r.data)
+      }, 600)
+    }
+    const channel = supabase
+      .channel(`leaderboard-${scope}-${me?.groupId ?? 'all'}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'attempts' }, refresh)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'attempts' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, refresh)
+      .subscribe(status => {
+        if (status === 'SUBSCRIBED') setLive(true)
+        else if (status === 'CHANNEL_ERROR' || status === 'CLOSED') setLive(false)
+      })
+    return () => {
+      if (timer) clearTimeout(timer)
+      supabase?.removeChannel(channel)
+      setLive(false)
+    }
+  }, [scope, me?.groupId])
+
   return (
-    <div className="pb-28">
-      <PageHeader eyebrow={t('app.tagline')} title={t('nav.leaderboard')} />
+    <div className="pb-32">
+      <PageHeader
+        eyebrow={t('app.tagline')}
+        title={t('nav.leaderboard')}
+        right={live ? (
+          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full border border-[var(--accent)]/40 bg-[var(--accent)]/10 text-[var(--accent)] font-mono text-[9px] uppercase tracking-[0.18em]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
+            LIVE
+          </span>
+        ) : null}
+      />
 
       <div className="px-5 mt-2 inline-flex">
         <div className="inline-flex bg-[var(--paper-2)] rounded-full border border-[var(--hairline)] p-0.5">

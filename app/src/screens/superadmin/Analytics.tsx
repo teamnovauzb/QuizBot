@@ -70,7 +70,7 @@ export default function Analytics() {
   }, [attempts])
 
   return (
-    <div className="pb-28">
+    <div className="pb-32">
       <PageHeader eyebrow={t('super.title')} title={t('nav.analytics')} />
 
       <div className="px-5 mt-2 grid grid-cols-2 gap-3">

@@ -50,8 +50,9 @@ export default function Result() {
       >
         <div className="absolute -right-12 -top-12 w-48 h-48 rounded-full bg-[var(--accent)] opacity-30 blur-3xl" />
 
-        <div className="flex items-center gap-5">
-          <div className="relative w-44 h-44 shrink-0">
+        {/* Score hero — ring shrinks on narrow phones (320px) so the side info doesn't get squashed */}
+        <div className="flex items-center gap-4">
+          <div className="relative w-32 h-32 sm:w-44 sm:h-44 shrink-0">
             <svg viewBox="0 0 200 200" className="-rotate-90 w-full h-full">
               <circle cx="100" cy="100" r="90" stroke="rgba(255,255,255,0.08)" strokeWidth="8" fill="none" />
               <motion.circle
@@ -66,18 +67,18 @@ export default function Result() {
             <div className="absolute inset-0 grid place-items-center">
               <div className="text-center">
                 <motion.div initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.6 }}>
-                  <div className="font-display text-[68px] leading-none numerals">{pct}<span className="text-2xl opacity-60">%</span></div>
-                  <div className="font-mono text-[10px] tracking-[0.3em] uppercase opacity-60 mt-1">{grade}-grade</div>
+                  <div className="font-display text-[44px] sm:text-[68px] leading-none numerals">{pct}<span className="text-lg sm:text-2xl opacity-60">%</span></div>
+                  <div className="font-mono text-[9px] sm:text-[10px] tracking-[0.3em] uppercase opacity-60 mt-1">{grade}-grade</div>
                 </motion.div>
               </div>
             </div>
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="font-display italic text-[var(--accent)] text-2xl mb-1">{verdict}</div>
-            <div className="font-display text-3xl">{attempt.score} <span className="opacity-50 text-xl">/ {attempt.total}</span></div>
-            <div className="text-[11px] uppercase font-mono tracking-[0.18em] opacity-60 mt-2">{t('result.duration')}</div>
-            <div className="font-mono text-sm">{fmtMs(attempt.durationMs)}</div>
+            <div className="font-display italic text-[var(--accent)] text-xl sm:text-2xl mb-1 truncate">{verdict}</div>
+            <div className="font-display text-2xl sm:text-3xl">{attempt.score} <span className="opacity-50 text-lg sm:text-xl">/ {attempt.total}</span></div>
+            <div className="text-[10px] sm:text-[11px] uppercase font-mono tracking-[0.18em] opacity-60 mt-2">{t('result.duration')}</div>
+            <div className="font-mono text-xs sm:text-sm">{fmtMs(attempt.durationMs)}</div>
           </div>
         </div>
 

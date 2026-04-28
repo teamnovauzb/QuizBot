@@ -154,9 +154,9 @@ export default function Quiz() {
   }
 
   return (
-    <Shell className="overflow-hidden">
-      {/* Header */}
-      <div className="px-5 pt-[max(env(safe-area-inset-top),16px)] pb-3 flex items-center justify-between gap-3">
+    <Shell>
+      {/* Header — sticky so progress + timer stay visible while body scrolls */}
+      <div className="sticky top-0 z-30 backdrop-blur-md bg-[var(--bg)]/85 px-5 pt-[max(env(safe-area-inset-top),12px)] pb-3 flex items-center justify-between gap-3 border-b border-[var(--hairline)]">
         <button onClick={() => setShowExit(true)} className="w-9 h-9 rounded-full border border-[var(--hairline)] grid place-items-center">
           <XIcon className="w-4 h-4 stroke-[var(--ink)]" />
         </button>
@@ -204,8 +204,8 @@ export default function Quiz() {
         </div>
       </div>
 
-      {/* Question body — editorial */}
-      <div className="px-5 pt-4 flex-1 flex flex-col">
+      {/* Question body — flows naturally; long questions/images scroll the page */}
+      <div className="px-5 pt-4 pb-[max(env(safe-area-inset-bottom),16px)]">
         <AnimatePresence mode="wait">
           <motion.div
             key={q.id}
@@ -251,7 +251,7 @@ export default function Quiz() {
         </AnimatePresence>
 
         {/* Options */}
-        <div className="flex-1 flex flex-col gap-2.5">
+        <div className="flex flex-col gap-2.5">
           {q.options.map((opt, i) => {
             const isCorrect = i === q.correctIndex
             const isChosen = i === chosen
@@ -297,8 +297,8 @@ export default function Quiz() {
           })}
         </div>
 
-        {/* Footer action */}
-        <div className="pt-4 pb-[max(env(safe-area-inset-bottom),16px)]">
+        {/* Footer action — flows after options; sticks to bottom only via natural flex flow */}
+        <div className="pt-4">
           {!revealed ? (
             <button
               disabled={chosen === null}
