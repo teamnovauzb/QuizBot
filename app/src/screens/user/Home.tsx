@@ -117,16 +117,16 @@ export default function UserHome() {
           <span className="font-mono text-[10px] tracking-[0.22em] uppercase text-[var(--ink-soft)] opacity-70">{t('home.todaysFocus')}</span>
           <SparkleIcon className="w-3 h-3 stroke-[var(--accent)]" />
         </div>
-        <Card className="p-5 relative overflow-hidden" onClick={start}>
+        <Card className="p-4 relative overflow-hidden" onClick={start}>
           <div className="absolute -right-6 -top-6 w-32 h-32 rounded-full bg-[var(--accent)] opacity-[0.08] blur-2xl" />
           <div className="flex items-end justify-between">
             <div>
               <div className="font-mono text-[10px] tracking-[0.18em] uppercase text-[var(--accent)]">{t('home.quickStart')}</div>
-              <div className="font-display text-[40px] leading-[0.95] mt-1">10 savol</div>
+              <div className="font-display font-bold text-[28px] leading-[1] mt-1">10 savol</div>
               <div className="text-xs text-[var(--ink-soft)] mt-1 font-mono">30s · {t('common.all')}</div>
             </div>
-            <div className="w-14 h-14 rounded-full bg-[var(--ink)] grid place-items-center">
-              <ArrowIcon className="w-5 h-5 stroke-[var(--paper)]" />
+            <div className="w-11 h-11 rounded-full bg-[var(--ink)] grid place-items-center shrink-0">
+              <ArrowIcon className="w-4 h-4 stroke-[var(--paper)]" />
             </div>
           </div>
         </Card>
@@ -260,18 +260,18 @@ export default function UserHome() {
 function StatTile({ label, value, unit, icon, accent }: { label: string; value: number | string; unit?: string; icon?: React.ReactNode; accent?: boolean }) {
   return (
     <div className={clsx(
-      'relative rounded-2xl p-4 border overflow-hidden',
+      'relative rounded-2xl p-3.5 border overflow-hidden',
       accent
         ? 'bg-[var(--accent)] border-transparent text-[var(--ink)]'
         : 'bg-[var(--paper-2)] border-[var(--hairline)]'
     )}>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] uppercase font-mono tracking-[0.18em] opacity-70">{label}</span>
-        {icon && <span className="w-3.5 h-3.5 opacity-60">{icon}</span>}
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-[10px] uppercase font-mono tracking-[0.18em] opacity-70 truncate">{label}</span>
+        {icon && <span className="w-3.5 h-3.5 opacity-60 shrink-0">{icon}</span>}
       </div>
       <div className="flex items-baseline gap-1">
-        <span className="font-display text-[40px] leading-none numerals">{value}</span>
-        {unit && <span className="font-mono text-xs opacity-60">{unit}</span>}
+        <span className="font-display font-bold text-[26px] leading-none tabular">{value}</span>
+        {unit && <span className="font-mono text-[10px] opacity-60">{unit}</span>}
       </div>
     </div>
   )

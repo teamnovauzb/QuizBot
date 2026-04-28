@@ -32,20 +32,23 @@ export default function Entry() {
   const [phoneVal, setPhoneVal] = useState('+998 ')
   const [nameVal, setNameVal] = useState('')
 
-  // 1. Connect Telegram on mount
+  const signedOut = useStore(s => s.signedOut)
+
+  // 1. Connect Telegram on mount — but only if user hasn't explicitly logged out
   useEffect(() => {
     const tg = initTelegram()
+    if (signedOut) return
     if (tg?.initDataUnsafe?.user) setTgUser(tg.initDataUnsafe.user)
-  }, [setTgUser])
+  }, [setTgUser, signedOut])
 
-  // 2. Auto-route when we recognize the user
+  // 2. Auto-route when we recognize the user (skipped after explicit logout)
   useEffect(() => {
-    if (!tgUser) return
+    if (!tgUser || signedOut) return
     const u = users.find(x => x.telegramId === tgUser.id)
     if (u?.role === 'superadmin') navigate('/super', { replace: true })
     else if (u?.role === 'admin') navigate('/admin', { replace: true })
     else if (u && (u.phone || isCachedShared(tgUser.id))) navigate('/u', { replace: true })
-  }, [tgUser?.id, users, navigate])
+  }, [tgUser?.id, users, navigate, signedOut])
 
   async function shareViaTelegram() {
     haptic('medium')

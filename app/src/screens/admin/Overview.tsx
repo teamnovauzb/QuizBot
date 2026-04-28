@@ -130,7 +130,7 @@ function BigStat({ icon, label, value, accent }: { icon: React.ReactNode; label:
         <span className="text-[10px] uppercase font-mono tracking-[0.18em] opacity-70">{label}</span>
         <span className="w-3.5 h-3.5 opacity-60">{icon}</span>
       </div>
-      <div className="font-display text-[40px] leading-none numerals">{value}</div>
+      <div className="font-display font-bold text-[26px] leading-none tabular">{value}</div>
     </div>
   )
 }

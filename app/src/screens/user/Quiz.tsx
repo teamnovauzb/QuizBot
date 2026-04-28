@@ -216,7 +216,7 @@ export default function Quiz() {
             className="mb-5"
           >
             <div className="flex items-baseline gap-3 mb-3">
-              <span className="font-display text-[64px] leading-none numerals text-[var(--ink-soft)] opacity-25">
+              <span className="font-display font-bold text-[40px] leading-none tabular text-[var(--ink-soft)] opacity-25">
                 {q.number.toString().padStart(2, '0')}
               </span>
               <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[var(--accent)]">{q.category}</span>

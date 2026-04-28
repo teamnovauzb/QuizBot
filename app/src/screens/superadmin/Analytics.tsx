@@ -133,7 +133,7 @@ function Stat({ label, value, accent }: { label: string; value: string | number;
   return (
     <div className={'rounded-2xl p-4 border ' + (accent ? 'bg-[var(--accent)] text-[var(--ink)] border-transparent' : 'bg-[var(--paper-2)] border-[var(--hairline)]')}>
       <div className="text-[10px] uppercase font-mono tracking-[0.18em] opacity-70 mb-1">{label}</div>
-      <div className="font-display text-[40px] leading-none numerals">{value}</div>
+      <div className="font-display font-bold text-[26px] leading-none tabular">{value}</div>
     </div>
   )
 }

@@ -113,7 +113,7 @@ export default function SuperOverview() {
         </div>
         <Card className="p-5">
           <div className="flex items-baseline gap-1 mb-4">
-            <span className="font-display text-[64px] leading-none numerals">{users.length}</span>
+            <span className="font-display font-bold text-[40px] leading-none tabular">{users.length}</span>
             <span className="text-xs text-[var(--ink-soft)] font-mono">total</span>
           </div>
           <Bar label={t('role.user')} value={regulars.length} total={users.length} color="var(--ink)" />
@@ -132,7 +132,7 @@ function Hero({ label, value, subtitle, icon, accent }: { label: string; value: 
         <span className="text-[10px] uppercase font-mono tracking-[0.18em] opacity-70">{label}</span>
         {icon && <span className="w-3.5 h-3.5 opacity-60">{icon}</span>}
       </div>
-      <div className="font-display text-[44px] leading-none numerals">{value}</div>
+      <div className="font-display font-bold text-[28px] leading-none tabular">{value}</div>
       {subtitle && <div className="text-[10px] uppercase font-mono tracking-[0.18em] mt-1 opacity-60">{subtitle}</div>}
     </div>
   )

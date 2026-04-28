@@ -14,6 +14,7 @@ type State = {
   syncing: boolean
   syncError: string | null
   tgUser: TelegramUser | null
+  signedOut: boolean
   currentRole: Role
   language: 'uz' | 'ru' | 'en'
 
@@ -102,6 +103,7 @@ export const useStore = create<State>()(persist((set, get) => ({
   syncing: false,
   syncError: null,
   tgUser: null,
+  signedOut: false,
   currentRole: 'user',
   language: 'uz',
 
@@ -115,6 +117,7 @@ export const useStore = create<State>()(persist((set, get) => ({
 
   setTgUser: (u) => {
     const exists = get().users.find(x => x.telegramId === u.id)
+    // Any explicit setTgUser clears the signedOut flag — user is "back".
     if (!exists) {
       const newUser: AppUser = {
         telegramId: u.id,
@@ -124,12 +127,13 @@ export const useStore = create<State>()(persist((set, get) => ({
         joinedAt: Date.now(),
         lastActive: Date.now(),
       }
-      set({ users: [...get().users, newUser], tgUser: u, currentRole: 'user' })
+      set({ users: [...get().users, newUser], tgUser: u, currentRole: 'user', signedOut: false })
       if (SUPABASE_ENABLED) fnf(api.upsertUserRow(newUser))
     } else {
       set({
         tgUser: u,
         currentRole: exists.role,
+        signedOut: false,
         users: get().users.map(x => x.telegramId === u.id ? { ...x, lastActive: Date.now() } : x),
       })
     }
@@ -214,20 +218,21 @@ export const useStore = create<State>()(persist((set, get) => ({
     }))
   },
   signOut: () => {
-    // Clear all per-user state — tgUser, phone caches, achievements, bookmarks
     const tid = get().tgUser?.id
     if (tid && typeof localStorage !== 'undefined') {
       try { localStorage.removeItem(`tg_contact_${tid}`) } catch {}
     }
+    // Persisted `signedOut` flag prevents Entry from re-detecting the
+    // Telegram user on the next mount. Cleared when user explicitly
+    // signs back in (setTgUser via share or demo pick).
     set({
       tgUser: null,
       currentRole: 'user',
       bookmarks: [],
       unlockedAchievements: [],
+      signedOut: true,
     })
-    // Clear Supabase auth session if present (best-effort, async)
     try {
-      // dynamic import to avoid circular deps
       import('../lib/supabase').then(m => { m.supabase?.auth.signOut() }).catch(() => {})
     } catch {}
   },
@@ -295,5 +300,6 @@ export const useStore = create<State>()(persist((set, get) => ({
     bookmarks: s.bookmarks,
     unlockedAchievements: s.unlockedAchievements,
     language: s.language,
+    signedOut: s.signedOut,
   }),
 }))
