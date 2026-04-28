@@ -18,8 +18,13 @@ export function Shell({ children, className }: { children: ReactNode; className?
 }
 
 export function PageHeader({ eyebrow, title, right }: { eyebrow?: string; title: string; right?: ReactNode }) {
+  // Top padding: respect Telegram/iOS safe-area inset, but never less than 40px
+  // so the header doesn't crash into the Telegram top bar / status bar.
   return (
-    <header className="px-5 pt-4 pb-3 flex items-end justify-between gap-3 fade-up">
+    <header
+      className="px-5 pb-3 flex items-end justify-between gap-3 fade-up"
+      style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 40px)' }}
+    >
       <div className="min-w-0 flex-1">
         {eyebrow && (
           <div className="text-[10px] tracking-[0.18em] uppercase font-mono text-[var(--text-muted)] mb-1.5 truncate">{eyebrow}</div>
