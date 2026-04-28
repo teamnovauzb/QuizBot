@@ -17,13 +17,11 @@ export function SplashScreen({ onDone }: { onDone: () => void }) {
       }
     >
       <div className="relative z-10 text-center">
-        <div className="relative mx-auto mb-6 w-24 h-24">
-          <div className="absolute inset-0 rounded-full bg-[var(--accent)] opacity-30 blur-2xl animate-pulse" />
-          <div className="relative w-full h-full rounded-3xl glass-strong grid place-items-center">
-            <span className="font-display font-bold text-5xl italic text-[var(--accent)]">Sh</span>
-          </div>
+        <div className="relative mx-auto mb-6 w-28 h-28">
+          <div className="absolute inset-0 rounded-[28px] bg-[var(--accent)] opacity-30 blur-2xl animate-pulse" />
+          <img src="/logo.svg" alt="Shifokor" className="relative w-full h-full drop-shadow-[0_8px_24px_rgba(93,229,168,0.35)]" />
         </div>
-        <h1 className="font-display font-bold text-4xl tracking-tight">Shifokorat</h1>
+        <h1 className="font-display font-bold text-4xl tracking-tight">Shifokor</h1>
         <p className="mt-2 text-sm text-[var(--text-muted)] tracking-wide">Bilim Sinovi</p>
         <div className="mt-8 flex justify-center gap-2">
           {[0, 1, 2].map(i => (

@@ -1,6 +1,6 @@
 export default {
   app: {
-    name: 'Shifokorat',
+    name: 'Shifokor',
     tagline: 'Bilim sinovi — informatika',
   },
   nav: {

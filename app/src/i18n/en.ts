@@ -1,6 +1,6 @@
 export default {
   app: {
-    name: 'Shifokorat',
+    name: 'Shifokor',
     tagline: 'Knowledge Test — Informatics',
   },
   nav: {

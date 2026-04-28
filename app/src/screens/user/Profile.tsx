@@ -69,7 +69,7 @@ export default function Profile() {
 
   function shareToTelegram() {
     haptic('medium')
-    const text = encodeURIComponent(`📊 Shifokorat — ${attempts.length} sinov · ${avgPct}% aniqlik · ${streak} kun ketma-ket`)
+    const text = encodeURIComponent(`📊 Shifokor — ${attempts.length} sinov · ${avgPct}% aniqlik · ${streak} kun ketma-ket`)
     const url = (typeof window !== 'undefined' && window.location.origin) || 'https://shifokorat.vercel.app'
     window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${text}`, '_blank')
   }

@@ -107,7 +107,7 @@ export default function Broadcast() {
               {body && <div className="text-sm leading-relaxed opacity-90 whitespace-pre-wrap">{body}</div>}
               <div className="flex items-center gap-2 mt-4 pt-3 border-t border-white/10 text-[10px] uppercase font-mono tracking-[0.18em] opacity-60">
                 <SendIcon className="w-3 h-3" />
-                <span>via Shifokorat · → {recipients.length}</span>
+                <span>via Shifokor · → {recipients.length}</span>
               </div>
             </div>
           </div>

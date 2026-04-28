@@ -100,15 +100,13 @@ export default function Entry() {
 
         {/* Hero — vertically centered */}
         <div className="flex-1 flex flex-col items-center justify-center text-center max-w-sm mx-auto w-full">
-          <div className="relative mx-auto mb-6 w-20 h-20 fade-up">
-            <div className="absolute inset-0 rounded-3xl bg-[var(--accent)] opacity-25 blur-2xl" />
-            <div className="relative w-full h-full rounded-3xl glass-strong grid place-items-center">
-              <span className="font-display font-bold text-4xl italic text-[var(--accent)]">Sh</span>
-            </div>
+          <div className="relative mx-auto mb-6 w-24 h-24 fade-up">
+            <div className="absolute inset-0 rounded-[28px] bg-[var(--accent)] opacity-30 blur-2xl" />
+            <img src="/logo.svg" alt="Shifokor" className="relative w-full h-full drop-shadow-[0_8px_24px_rgba(93,229,168,0.35)]" />
           </div>
 
-          <h1 className="font-display font-bold text-[34px] leading-tight tracking-tight fade-up" style={{ animationDelay: '0.05s' }}>
-            Shifokorat
+          <h1 className="font-display font-bold text-[36px] leading-tight tracking-tight fade-up" style={{ animationDelay: '0.05s' }}>
+            Shifokor
           </h1>
           <p className="text-[var(--text-muted)] text-sm mt-1.5 fade-up" style={{ animationDelay: '0.1s' }}>
             {t('app.tagline')}
