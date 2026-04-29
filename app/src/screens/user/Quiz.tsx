@@ -13,6 +13,21 @@ import clsx from 'clsx'
 
 type AnswerRecord = { questionId: string; chosenIndex: number | null; correct: boolean; timeMs: number }
 
+/** RFC-4122 v4 UUID — uses native crypto.randomUUID where available, falls
+ *  back to a manual generator for older WebViews (Android < 12 / iOS < 15.4). */
+function newUuid(): string {
+  const c: any = (typeof crypto !== 'undefined') ? crypto : null
+  if (c && typeof c.randomUUID === 'function') return c.randomUUID()
+  // Fallback: 16 random bytes formatted per RFC-4122 v4
+  const b = new Uint8Array(16)
+  if (c && typeof c.getRandomValues === 'function') c.getRandomValues(b)
+  else for (let i = 0; i < 16; i++) b[i] = Math.floor(Math.random() * 256)
+  b[6] = (b[6] & 0x0f) | 0x40 // version 4
+  b[8] = (b[8] & 0x3f) | 0x80 // variant 10
+  const h = Array.from(b, x => x.toString(16).padStart(2, '0')).join('')
+  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`
+}
+
 export default function Quiz() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
@@ -117,7 +132,12 @@ export default function Quiz() {
     const finalAnswers = answers
     const score = finalAnswers.filter(a => a.correct).length
     const attempt: Attempt = {
-      id: `att-${Date.now().toString(36)}`,
+      // attempts.id is a UUID column in Supabase — must be a real RFC-4122 v4
+      // (a tag like "att-moior27f" is rejected with HTTP 400 + the postgres
+      // error `invalid input syntax for type uuid`). crypto.randomUUID() ships
+      // in every modern mobile browser; we keep a tiny RFC-4122 fallback for
+      // older WebViews so the field is always valid.
+      id: newUuid(),
       userId: tgUser?.id ?? 0,
       startedAt: startedAt.current,
       finishedAt: Date.now(),
