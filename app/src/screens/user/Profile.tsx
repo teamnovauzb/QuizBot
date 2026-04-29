@@ -84,10 +84,6 @@ export default function Profile() {
           <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full bg-[var(--accent)] opacity-15 blur-[120px]" />
         </div>
 
-        <div className="flex items-center justify-end mb-2">
-          <LangSwitcher />
-        </div>
-
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
           transition={{ type: 'spring', damping: 22, stiffness: 220, delay: 0.05 }}
@@ -137,6 +133,18 @@ export default function Profile() {
           <InfoRow icon={<CheckBadgeIcon className="w-5 h-5" />} label={t('profile.status')}
             value={me?.phoneVerified ? t('profile.verified') : t('profile.unverified')}
             valueColor={me?.phoneVerified ? 'accent' : 'muted'} />
+          <Divider />
+          {/* Language row — moved here from the top header so it sits with the
+              other identity rows (Phone / Telegram ID / Holat). */}
+          <div className="flex items-center gap-3 py-2">
+            <div className="w-11 h-11 rounded-xl bg-[var(--accent-soft)] grid place-items-center text-[var(--accent)] shrink-0">
+              <SendIcon className="w-5 h-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs text-[var(--text-muted)]">{t('common.language')}</div>
+            </div>
+            <LangSwitcher />
+          </div>
         </Card>
 
         {/* Stats strip */}
@@ -193,26 +201,16 @@ export default function Profile() {
           </Card>
         </div>
 
-        {/* SETTINGS — theme + language */}
+        {/* SETTINGS — theme only (language moved into the identity card above) */}
         <div className="fade-up" style={{ animationDelay: '0.2s' }}>
           <SectionLabel>{t('nav.settings')}</SectionLabel>
-          <Card className="p-5 space-y-5">
+          <Card className="p-5">
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <SettingsIcon className="w-4 h-4 stroke-[var(--text-muted)]" />
                 <span className="font-display font-semibold text-base">{t('common.theme')}</span>
               </div>
               <ThemeToggle />
-            </div>
-
-            <Divider />
-
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <SendIcon className="w-4 h-4 stroke-[var(--text-muted)]" />
-                <span className="font-display font-semibold text-base">{t('common.language')}</span>
-              </div>
-              <LangSwitcher />
             </div>
           </Card>
         </div>
